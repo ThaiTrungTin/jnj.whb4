@@ -247,6 +247,14 @@ function renderUserList(users, allNganhEnriched) {
                                 <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
                                 Reset mật khẩu
                             </button>
+                            <button class="change-name-btn flex items-center gap-2 w-full px-3 py-2 text-[10px] text-gray-600 hover:bg-blue-50" data-gmail="${user.gmail}" data-name="${user.ho_ten}">
+                                <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                Đổi tên
+                            </button>
+                            <button class="copy-info-btn flex items-center gap-2 w-full px-3 py-2 text-[10px] text-gray-600 hover:bg-blue-50" data-gmail="${user.gmail}" data-pwd="${user.mat_khau}">
+                                <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                Thông tin đăng nhập
+                            </button>
                             <button class="user-status-option flex items-center gap-2 w-full px-3 py-2 text-[10px] ${isLocked ? 'text-green-600' : 'text-orange-600'} hover:bg-gray-50" data-gmail="${user.gmail}" data-status="${isLocked ? 'Đã Duyệt' : 'Khóa'}">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                                 ${isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
@@ -453,6 +461,26 @@ export function initCaiDatView() {
         }
         const resetBtn = e.target.closest('.reset-password-btn');
         if (resetBtn) { openPasswordResetModal(resetBtn.dataset.gmail); return; }
+        
+        const changeNameBtn = e.target.closest('.change-name-btn');
+        if (changeNameBtn) {
+            document.getElementById('change-name-gmail').value = changeNameBtn.dataset.gmail;
+            document.getElementById('change-name-gmail-display').textContent = changeNameBtn.dataset.gmail;
+            document.getElementById('change-name-input').value = changeNameBtn.dataset.name;
+            document.getElementById('change-name-modal').classList.remove('hidden');
+            return;
+        }
+
+        const copyInfoBtn = e.target.closest('.copy-info-btn');
+        if (copyInfoBtn) {
+            const gmail = copyInfoBtn.dataset.gmail;
+            const pwd = copyInfoBtn.dataset.pwd;
+            document.getElementById('info-modal-gmail').textContent = gmail;
+            document.getElementById('info-modal-pwd').textContent = pwd;
+            document.getElementById('user-info-modal').classList.remove('hidden');
+            return;
+        }
+        
         const statusBtn = e.target.closest('.user-status-option');
         if (statusBtn) handleUpdateUserStatus(statusBtn.dataset.gmail, statusBtn.dataset.status);
         const delBtn = e.target.closest('.user-delete-option');
@@ -461,6 +489,37 @@ export function initCaiDatView() {
 
     document.getElementById('password-reset-form').addEventListener('submit', handlePasswordReset);
     document.getElementById('cancel-reset-btn').onclick = () => document.getElementById('password-reset-modal').classList.add('hidden');
+    
+    document.getElementById('change-name-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const gmail = document.getElementById('change-name-gmail').value;
+        const newName = document.getElementById('change-name-input').value.trim();
+        if (!newName) return;
+        showLoading(true);
+        const { error } = await sb.from('user').update({ ho_ten: newName }).eq('gmail', gmail);
+        showLoading(false);
+        if (!error) {
+            showToast("Đã đổi tên.", 'success');
+            document.getElementById('change-name-modal').classList.add('hidden');
+            fetchUsers();
+        } else {
+            showToast("Lỗi khi đổi tên.", 'error');
+        }
+    });
+    
+    document.getElementById('cancel-change-name-btn').onclick = () => document.getElementById('change-name-modal').classList.add('hidden');
+    document.getElementById('close-info-modal-btn').onclick = () => document.getElementById('user-info-modal').classList.add('hidden');
+    
+    document.getElementById('copy-info-btn-action').onclick = () => {
+        const gmail = document.getElementById('info-modal-gmail').textContent;
+        const pwd = document.getElementById('info-modal-pwd').textContent;
+        const textToCopy = `Tên đăng nhập : ${gmail}\nMật Khẩu : ${pwd}`;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast("Đã copy tài khoản!", 'success');
+        }).catch(() => {
+            showToast("Không thể copy, vui lòng thử lại.", 'error');
+        });
+    };
     document.getElementById('backup-excel-btn').onclick = handleBackupExcel;
 
     const processAvatar = (file) => {

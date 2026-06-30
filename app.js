@@ -48,6 +48,8 @@ export const viewStates = {
         filters: { ma_vt: [], ten_vt: [], nganh: [], phu_trach: [] },
         totalFilteredCount: 0,
         paginationText: '',
+        sortCol: 'ma_vt',
+        sortDir: 'asc'
     },
     'view-ton-kho': {
         currentPage: 1,
@@ -58,6 +60,8 @@ export const viewStates = {
         stockAvailability: 'available',
         totalFilteredCount: 0,
         paginationText: '',
+        sortCol: 'ma_vach',
+        sortDir: 'asc'
     },
     'view-chi-tiet': {
         currentPage: 1,

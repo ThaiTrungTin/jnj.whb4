@@ -227,7 +227,15 @@ export async function fetchTonKho(page = viewStates['view-ton-kho'].currentPage,
         const from = (page - 1) * itemsPerPage;
         const to = from + itemsPerPage - 1;
 
-        let query = buildTonKhoQuery().order('ma_vach', { ascending: true }).range(from, to);
+        let sortCol = state.sortCol || 'ma_vach';
+        const sortDir = state.sortCol ? (state.sortDir === 'asc') : true;
+        
+        let dbSortCol = sortCol;
+        if (sortCol === 'tinh_trang') {
+            dbSortCol = 'ngay_con_lai';
+        }
+        
+        let query = buildTonKhoQuery().order(dbSortCol, { ascending: sortDir, nullsFirst: false }).range(from, to);
 
         const [queryResult, _] = await Promise.all([
             query,
@@ -461,6 +469,43 @@ export function initTonKhoView() {
     viewContainer.addEventListener('click', e => {
         const btn = e.target.closest('.filter-btn');
         if (btn) openTonKhoFilterPopoverCustom(btn, 'view-ton-kho');
+
+        const sortHeader = e.target.closest('.tk-sortable-header');
+        if (sortHeader) {
+            const col = sortHeader.dataset.sort;
+            if (col) {
+                const state = viewStates['view-ton-kho'];
+                if (state.sortCol === col) {
+                    if (state.sortDir === 'asc') {
+                        state.sortDir = 'desc';
+                    } else if (state.sortDir === 'desc') {
+                        state.sortCol = null;
+                        state.sortDir = null;
+                    }
+                } else {
+                    state.sortCol = col;
+                    state.sortDir = 'asc';
+                }
+                
+                viewContainer.querySelectorAll('.tk-sortable-header .sort-icon').forEach(icon => {
+                    icon.className = 'sort-icon ml-1 text-gray-400';
+                    icon.innerHTML = '<svg class="w-3 h-3 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20V4m0 0L3 8m4-4l4 4 M17 4v16m0 0l4-4m-4 4l-4-4"></path></svg>';
+                });
+                
+                if (state.sortCol === col) {
+                    const iconSpan = sortHeader.querySelector('.sort-icon');
+                    if (iconSpan) {
+                        iconSpan.className = 'sort-icon ml-1';
+                        // SVG icons for up/down arrow side-by-side (Excel style)
+                        iconSpan.innerHTML = state.sortDir === 'asc' 
+                            ? '<svg class="w-3 h-3 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path class="text-blue-600" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20V4m0 0L3 8m4-4l4 4"></path><path class="text-gray-300" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 4v16m0 0l4-4m-4 4l-4-4"></path></svg>'
+                            : '<svg class="w-3 h-3 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path class="text-gray-300" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20V4m0 0L3 8m4-4l4 4"></path><path class="text-blue-600" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 4v16m0 0l4-4m-4 4l-4-4"></path></svg>';
+                    }
+                }
+
+                fetchTonKho(1);
+            }
+        }
     });
 
     const toggleAvailableBtn = document.getElementById('ton-kho-toggle-available');

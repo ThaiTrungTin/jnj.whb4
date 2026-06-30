@@ -35,7 +35,9 @@ export async function fetchSanPham(page = viewStates['view-san-pham'].currentPag
         const from = (page - 1) * state.itemsPerPage;
         const to = from + state.itemsPerPage - 1;
         
-        let query = buildSanPhamQuery().order('ma_vt', { ascending: true }).range(from, to);
+        const sortCol = state.sortCol || 'ma_vt';
+        const sortDir = state.sortCol ? (state.sortDir === 'asc') : true;
+        let query = buildSanPhamQuery().order(sortCol, { ascending: sortDir }).range(from, to);
         const { data, error, count } = await query;
         
         if (error) {
@@ -218,6 +220,43 @@ export function initSanPhamView() {
         if (btn) {
             openFilterPopover(btn, 'view-san-pham');
             return;
+        }
+
+        const sortHeader = e.target.closest('.tk-sortable-header');
+        if (sortHeader) {
+            const col = sortHeader.dataset.sort;
+            if (col) {
+                const state = viewStates['view-san-pham'];
+                if (state.sortCol === col) {
+                    if (state.sortDir === 'asc') {
+                        state.sortDir = 'desc';
+                    } else if (state.sortDir === 'desc') {
+                        state.sortCol = null;
+                        state.sortDir = null;
+                    }
+                } else {
+                    state.sortCol = col;
+                    state.sortDir = 'asc';
+                }
+                
+                view.querySelectorAll('.tk-sortable-header .sort-icon').forEach(icon => {
+                    icon.className = 'sort-icon ml-1 text-gray-400';
+                    icon.innerHTML = '<svg class="w-3 h-3 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20V4m0 0L3 8m4-4l4 4 M17 4v16m0 0l4-4m-4 4l-4-4"></path></svg>';
+                });
+                
+                if (state.sortCol === col) {
+                    const iconSpan = sortHeader.querySelector('.sort-icon');
+                    if (iconSpan) {
+                        iconSpan.className = 'sort-icon ml-1';
+                        // SVG icons for up/down arrow side-by-side (Excel style)
+                        iconSpan.innerHTML = state.sortDir === 'asc' 
+                            ? '<svg class="w-3 h-3 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path class="text-blue-600" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20V4m0 0L3 8m4-4l4 4"></path><path class="text-gray-300" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 4v16m0 0l4-4m-4 4l-4-4"></path></svg>'
+                            : '<svg class="w-3 h-3 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path class="text-gray-300" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20V4m0 0L3 8m4-4l4 4"></path><path class="text-blue-600" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 4v16m0 0l4-4m-4 4l-4-4"></path></svg>';
+                    }
+                }
+
+                fetchSanPham(1);
+            }
         }
 
         // Logic điều hướng sang Tồn kho khi nhấn vào Mã VT
