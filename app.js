@@ -67,7 +67,7 @@ export const viewStates = {
         currentPage: 1,
         itemsPerPage: 50,
         searchTerm: '',
-        filters: { from_date: '', to_date: '', loai: [], ma_kho: [], ma_nx: [], ma_vt: [], lot: [], nganh: [], phu_trach: [], yeu_cau: [] },
+        filters: { from_date: '', to_date: '', loai_don: '', trang_thai: '', loai: [], ma_kho: [], ma_nx: [], ma_vach: [], ma_vt: [], ten_vt: [], lot: [], date: [], nganh: [], phu_trach: [], yeu_cau: [], muc_dich: [] },
         totalFilteredCount: 0,
         paginationText: '',
     }
@@ -1226,7 +1226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { id: 'password-reset-modal', closeBtnId: 'cancel-reset-btn' },
                 { id: 'san-pham-modal', closeBtnId: 'cancel-san-pham-btn' },
                 { id: 'ton-kho-modal', closeBtnId: 'cancel-ton-kho-btn' },
-                { id: 'ton-kho-settings-modal', closeBtnId: 'ton-kho-settings-close-btn' },
+                { id: 'ton-kho-settings-modal', closeBtnId: 'ton-kho-settings-cancel-btn' },
                 { id: 'chi-tiet-settings-modal', closeBtnId: 'chi-tiet-settings-close-btn' },
                 { id: 'chi-tiet-vt-modal', closeBtnId: 'close-ct-vt-modal' },
                 { id: 'voice-settings-modal', closeBtnId: 'close-voice-settings-modal' },
