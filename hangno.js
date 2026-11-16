@@ -886,8 +886,7 @@ async function loadTimelineStats() {
 /**
  * Phân quyền hiển thị dữ liệu Hàng Nợ theo vai trò người dùng:
  * - Admin: Thấy toàn bộ dữ liệu (full).
- * - User: Thấy của ngành mình đang theo dõi (xem_data) + dòng do chính mình mượn.
- * - View (hoặc các vai trò khác): Chỉ thấy được những dòng có tên người mượn giống của mình.
+ * - User & View: Thấy của ngành mình đang theo dõi (xem_data) + các dòng do chính mình mượn hoặc làm BMs.
  */
 function applyRolePermissionFilter(items) {
     if (!currentUser) return items;
@@ -899,28 +898,78 @@ function applyRolePermissionFilter(items) {
     }
 
     const myName = (currentUser.ho_ten || '').trim().toLowerCase();
+    const myGmail = (currentUser.gmail || '').trim().toLowerCase();
+    const xemData = (currentUser.xem_data || '').trim().toLowerCase();
 
-    // User: Thấy của ngành mình đang theo dõi (xem_data) + các dòng do chính mình mượn
-    if (role === 'user') {
-        const allowedNganh = (currentUser.xem_data || '')
-            .split(',')
-            .map(n => n.trim().toLowerCase())
-            .filter(Boolean);
-
-        return items.filter(item => {
-            const itemBorrower = (item.yeu_cau || '').trim().toLowerCase();
-            const itemNganh = (item.nganh || '').trim().toLowerCase();
-            const isMyLoan = Boolean(myName && itemBorrower === myName);
-            const isMyNganh = Boolean(allowedNganh.length > 0 && allowedNganh.includes(itemNganh));
-            return isMyLoan || isMyNganh;
-        });
+    // Nếu xem_data là all hoặc * -> thấy full
+    if (xemData === 'all' || xemData === '*') {
+        return items;
     }
 
-    // View: Chỉ thấy được những dòng có tên người mượn giống của mình
+    const allowedNganh = xemData
+        .split(',')
+        .map(n => n.trim().toLowerCase())
+        .filter(Boolean);
+
+    // Cả User và View đều được thấy các đơn của người trong ngành mình theo dõi (xem_data) + các dòng do chính mình mượn hoặc làm BMs
     return items.filter(item => {
         const itemBorrower = (item.yeu_cau || '').trim().toLowerCase();
-        return Boolean(myName && itemBorrower === myName);
+        const itemNganh = (item.nganh || '').trim().toLowerCase();
+        const itemBm = (item.bms || '').trim().toLowerCase();
+        const isMyLoan = Boolean(myName && itemBorrower === myName) || Boolean(myGmail && itemBorrower === myGmail);
+        const isMyBm = Boolean(myName && itemBm === myName);
+        const isMyNganh = Boolean(allowedNganh.length > 0 && allowedNganh.includes(itemNganh));
+        return isMyLoan || isMyBm || isMyNganh;
     });
+}
+
+/**
+ * Kiểm tra xem người dùng hiện tại có quyền sửa đơn DO hay không:
+ * - Admin: toàn quyền sửa.
+ * - View / User: Tên đăng nhập (hoặc họ tên) phải khớp với BMs hoặc Người mượn thì mới sửa được, ngược lại chỉ xem.
+ */
+function checkCanEditDo(items, existingBms = '') {
+    if (!currentUser) return false;
+    const role = (currentUser.phan_quyen || '').trim().toLowerCase();
+    if (role === 'admin') return true;
+
+    const myName = (currentUser.ho_ten || '').trim().toLowerCase();
+    const myGmail = (currentUser.gmail || '').trim().toLowerCase();
+
+    if (!myName && !myGmail) return false;
+
+    if (existingBms) {
+        const b = existingBms.trim().toLowerCase();
+        if ((myName && b === myName) || (myGmail && b === myGmail)) return true;
+    }
+
+    return items.some(it => {
+        const borrower = (it.yeu_cau || '').trim().toLowerCase();
+        const bm = (it.bms || '').trim().toLowerCase();
+        const matchBorrower = (myName && borrower === myName) || (myGmail && borrower === myGmail);
+        const matchBm = (myName && bm === myName) || (myGmail && bm === myGmail);
+        return matchBorrower || matchBm;
+    });
+}
+
+/**
+ * Kiểm tra xem người dùng hiện tại có quyền sửa dòng hàng nợ con hay không
+ */
+function canEditHangNoItem(item) {
+    if (!currentUser || !item) return false;
+    const role = (currentUser.phan_quyen || '').trim().toLowerCase();
+    if (role === 'admin') return true;
+
+    const myName = (currentUser.ho_ten || '').trim().toLowerCase();
+    const myGmail = (currentUser.gmail || '').trim().toLowerCase();
+
+    if (!myName && !myGmail) return false;
+
+    const borrower = (item.yeu_cau || '').trim().toLowerCase();
+    const bm = (item.bms || '').trim().toLowerCase();
+
+    return (myName && (borrower === myName || bm === myName)) ||
+           (myGmail && (borrower === myGmail || bm === myGmail));
 }
 
 /**
