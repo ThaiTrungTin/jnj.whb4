@@ -7,13 +7,59 @@ const AVAILABLE_VIEWS = [
     { id: 'view-phat-trien', label: 'Tổng Quan' },
     { id: 'view-san-pham', label: 'Sản Phẩm' },
     { id: 'view-ton-kho', label: 'Tồn Kho' },
-    { id: 'view-chi-tiet', label: 'Chi Tiết' }
+    { id: 'view-chi-tiet', label: 'Chi Tiết' },
+    { id: 'view-hang-no', label: 'Hàng Nợ' }
 ];
 
+let currentSearchTerm = '';
+let cachedEnrichedNganh = [];
+
 /**
- * Hàm mở Droplist Checklist (Popover) - Tối ưu Mobile nhỏ gọn
+ * Loại bỏ dấu tiếng Việt để tìm kiếm đa năng không phụ thuộc dấu
  */
-function openMultiSelectDroplist(button, options, currentSelected, onApply) {
+function removeVietnameseTones(str) {
+    if (!str) return '';
+    return String(str)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, m => (m === 'đ' ? 'd' : 'D'))
+        .toLowerCase()
+        .trim();
+}
+
+/**
+ * Kiểm tra xem người dùng có khớp với từ khóa tìm kiếm đa năng không
+ */
+function matchesUser(user, term) {
+    if (!term) return true;
+    const cleanTerm = removeVietnameseTones(term);
+    const nameNorm = removeVietnameseTones(user.ho_ten || '');
+    const emailNorm = String(user.gmail || '').toLowerCase();
+    const roleNorm = removeVietnameseTones(user.phan_quyen || '');
+    const statusNorm = removeVietnameseTones(user.stt || '');
+    const viewNorm = removeVietnameseTones(user.xem_view || '');
+    const dataNorm = removeVietnameseTones(user.xem_data || '');
+
+    // Kiểm tra trạng thái hiện diện online/offline
+    const presence = onlineUsers.get(user.gmail);
+    const status = presence ? (presence.status || 'online') : 'offline';
+    const statusLabel = status === 'online' ? 'dang hoat dong online' : (status === 'away' ? 'vang mat away' : 'ngoai tuyen offline');
+
+    return (
+        nameNorm.includes(cleanTerm) ||
+        emailNorm.includes(cleanTerm) ||
+        roleNorm.includes(cleanTerm) ||
+        statusNorm.includes(cleanTerm) ||
+        viewNorm.includes(cleanTerm) ||
+        dataNorm.includes(cleanTerm) ||
+        statusLabel.includes(cleanTerm)
+    );
+}
+
+/**
+ * Hàm mở Droplist Checklist (Popover) - Tối ưu nhỏ gọn, chuẩn Enterprise ERP, không màu mè AI
+ */
+function openMultiSelectDroplist(button, options, currentSelected, onApply, title = 'Lựa chọn') {
     if (!button) return;
     const oldPopover = document.getElementById('settings-droplist-popover');
     if (oldPopover) oldPopover.remove();
@@ -23,15 +69,15 @@ function openMultiSelectDroplist(button, options, currentSelected, onApply) {
     const isMobile = window.innerWidth <= 768;
 
     popover.className = isMobile
-        ? 'fixed inset-x-6 top-24 bottom-24 z-[100] bg-white border border-gray-200 rounded-2xl shadow-2xl p-3 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300'
-        : 'fixed z-[100] bg-white border border-gray-200 rounded-xl shadow-2xl p-4 flex flex-col w-[380px] animate-in fade-in zoom-in duration-200';
+        ? 'fixed inset-x-4 top-20 bottom-20 z-[100] bg-white border border-slate-200 rounded-xl shadow-xl p-3 flex flex-col'
+        : 'fixed z-[100] bg-white border border-slate-200 rounded-xl shadow-xl p-3 flex flex-col w-[300px] text-xs';
 
     if (!isMobile) {
         const rect = button.getBoundingClientRect();
-        let top = rect.bottom + window.scrollY + 8;
+        let top = rect.bottom + 6;
         let left = rect.left;
-        if (left + 380 > window.innerWidth) left = window.innerWidth - 400;
-        if (top + 350 > window.innerHeight + window.scrollY) top = rect.top + window.scrollY - 360;
+        if (left + 300 > window.innerWidth) left = window.innerWidth - 315;
+        if (top + 340 > window.innerHeight) top = rect.top - 340;
         popover.style.top = `${Math.max(10, top)}px`;
         popover.style.left = `${Math.max(10, left)}px`;
     }
@@ -39,43 +85,77 @@ function openMultiSelectDroplist(button, options, currentSelected, onApply) {
     const selectedSet = new Set(currentSelected.map(s => s.trim()).filter(Boolean));
 
     popover.innerHTML = `
-        <div class="flex items-center justify-between mb-2 border-b pb-2">
-            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Danh mục & Phụ trách</h4>
-            <button id="droplist-close" class="text-gray-400 hover:text-gray-600 text-xl px-2">&times;</button>
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+            <span class="font-bold text-slate-800 text-xs">${title}</span>
+            <button id="droplist-close" type="button" class="text-slate-400 hover:text-slate-600 p-0.5 rounded transition-colors text-base leading-none">&times;</button>
         </div>
-        <div class="mb-2">
-            <input type="text" id="droplist-search" placeholder="Tìm nhanh..." class="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-500">
+        
+        <div class="relative mb-2">
+            <input type="text" id="droplist-search" placeholder="Lọc nhanh..." 
+                class="w-full pl-7 pr-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-md outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
         </div>
-        <div id="droplist-items" class="max-h-[240px] overflow-y-auto space-y-0.5 no-scrollbar pr-1 border-b pb-2">
+
+        <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1.5 px-0.5">
+            <span id="droplist-count-info">Đã chọn: <b class="text-blue-600" id="droplist-selected-count">${selectedSet.size}</b>/${options.length}</span>
+            <div class="flex items-center gap-2">
+                <button type="button" id="droplist-select-all" class="text-blue-600 hover:underline font-medium">Tất cả</button>
+                <span class="text-slate-300">|</span>
+                <button type="button" id="droplist-clear-all" class="text-slate-500 hover:text-red-600 font-medium">Bỏ chọn</button>
+            </div>
+        </div>
+
+        <div id="droplist-items" class="max-h-[220px] overflow-y-auto space-y-0.5 border border-slate-100 rounded-md p-1 bg-slate-50/50">
             ${options.map(opt => `
-                <label class="flex items-center p-2 hover:bg-blue-50 rounded-lg cursor-pointer transition-all active:bg-blue-100 group border-b border-gray-50 last:border-0">
-                    <input type="checkbox" value="${opt.id}" class="droplist-cb w-4 h-4 rounded text-blue-600 border-gray-300 mr-2.5" ${selectedSet.has(opt.id) ? 'checked' : ''}>
-                    <div class="flex-grow flex justify-between items-center min-w-0">
-                        <span class="text-xs font-bold text-gray-700 truncate group-hover:text-blue-700">${opt.label}</span>
-                        <span class="text-[9px] font-medium text-gray-400 italic ml-2 flex-shrink-0">${opt.subInfo || ''}</span>
-                    </div>
+                <label class="flex items-center px-2 py-1.5 hover:bg-blue-50/80 rounded cursor-pointer transition-colors text-xs text-slate-700">
+                    <input type="checkbox" value="${opt.id}" class="droplist-cb w-3.5 h-3.5 rounded text-blue-600 border-slate-300 focus:ring-0 mr-2 cursor-pointer" ${selectedSet.has(opt.id) ? 'checked' : ''}>
+                    <span class="flex-1 truncate font-medium">${opt.label}</span>
+                    ${opt.subInfo ? `<span class="text-[10px] text-slate-400 ml-1.5 flex-shrink-0">${opt.subInfo}</span>` : ''}
                 </label>
             `).join('')}
         </div>
-        <div class="mt-2 flex justify-between items-center gap-2">
-            <button id="droplist-clear" class="text-[9px] font-bold text-red-400 px-1 uppercase">Xóa hết</button>
-            <button id="droplist-apply" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md active:scale-95 transition-all uppercase text-[10px]">Xác nhận</button>
+
+        <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+            <button type="button" id="droplist-cancel" class="px-2.5 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded-md transition-colors font-medium">Hủy</button>
+            <button type="button" id="droplist-apply" class="px-3.5 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md font-semibold transition-colors shadow-sm">Xác nhận</button>
         </div>
     `;
 
     document.body.appendChild(popover);
 
+    const countEl = popover.querySelector('#droplist-selected-count');
+    const updateCount = () => {
+        const count = popover.querySelectorAll('.droplist-cb:checked').length;
+        if (countEl) countEl.textContent = count;
+    };
+
+    popover.querySelectorAll('.droplist-cb').forEach(cb => cb.addEventListener('change', updateCount));
+
     const searchInput = popover.querySelector('#droplist-search');
     searchInput.focus();
     searchInput.oninput = (e) => {
-        const term = e.target.value.toLowerCase();
+        const term = removeVietnameseTones(e.target.value);
         popover.querySelectorAll('#droplist-items label').forEach(label => {
-            label.classList.toggle('hidden', !label.textContent.toLowerCase().includes(term));
+            const text = removeVietnameseTones(label.textContent);
+            label.classList.toggle('hidden', !text.includes(term));
         });
     };
 
+    popover.querySelector('#droplist-select-all').onclick = () => {
+        popover.querySelectorAll('#droplist-items label:not(.hidden) .droplist-cb').forEach(cb => cb.checked = true);
+        updateCount();
+    };
+
+    popover.querySelector('#droplist-clear-all').onclick = () => {
+        popover.querySelectorAll('.droplist-cb').forEach(cb => cb.checked = false);
+        updateCount();
+    };
+
     popover.querySelector('#droplist-close').onclick = () => popover.remove();
-    popover.querySelector('#droplist-clear').onclick = () => popover.querySelectorAll('.droplist-cb').forEach(cb => cb.checked = false);
+    popover.querySelector('#droplist-cancel').onclick = () => popover.remove();
+
     popover.querySelector('#droplist-apply').onclick = () => {
         const checkedValues = Array.from(popover.querySelectorAll('.droplist-cb:checked')).map(cb => cb.value);
         onApply(checkedValues);
@@ -88,7 +168,7 @@ function openMultiSelectDroplist(button, options, currentSelected, onApply) {
             document.removeEventListener('mousedown', closeHandler);
         }
     };
-    if (!isMobile) document.addEventListener('mousedown', closeHandler);
+    if (!isMobile) setTimeout(() => document.addEventListener('mousedown', closeHandler), 10);
 }
 
 // Hiển thị khoảng thời gian kể từ timestamp ISO (ví dụ "2 giờ trước")
@@ -119,20 +199,22 @@ async function handleProfileUpdate(e) {
 
     showLoading(true);
     try {
-        // NÂNG CẤP: Kiểm tra mật khẩu cũ trực tiếp từ DB thay vì dựa vào session
-        const { data: dbUser, error: fetchError } = await sb.from('user').select('mat_khau').eq('gmail', currentUser.gmail).single();
-        if (fetchError || !dbUser) throw new Error("Không thể xác thực người dùng.");
-
-        if (dbUser.mat_khau !== old_password) {
-            showToast("Mật khẩu cũ không chính xác.", 'error');
-            showLoading(false);
-            return;
-        }
-
-        if (new_password && new_password !== confirm_password) {
-            showToast("Mật khẩu mới không khớp.", 'error');
-            showLoading(false);
-            return;
+        // Cập nhật mật khẩu qua Supabase Auth nếu người dùng nhập mật khẩu mới
+        if (new_password) {
+            if (new_password.length < 6) {
+                showToast("Mật khẩu mới phải từ 6 ký tự trở lên.", 'error');
+                showLoading(false);
+                return;
+            }
+            if (new_password !== confirm_password) {
+                showToast("Mật khẩu mới không khớp.", 'error');
+                showLoading(false);
+                return;
+            }
+            const { error: authPwdErr } = await sb.auth.updateUser({ password: new_password });
+            if (authPwdErr) {
+                console.warn("Auth updateUser error:", authPwdErr.message);
+            }
         }
 
         if (selectedAvatarFile) {
@@ -144,7 +226,6 @@ async function handleProfileUpdate(e) {
         }
 
         const updateData = { ho_ten, anh_dai_dien_url };
-        if (new_password) updateData.mat_khau = new_password;
 
         const { data, error } = await sb.from('user').update(updateData).eq('gmail', currentUser.gmail).select().single();
         if (error) throw error;
@@ -162,6 +243,7 @@ async function handleProfileUpdate(e) {
         document.getElementById('profile-confirm-password').value = '';
 
         showToast("Đã cập nhật thông tin cá nhân!", "success");
+        closeProfileModal();
     } catch (err) {
         showToast(err.message, 'error');
     } finally {
@@ -170,17 +252,23 @@ async function handleProfileUpdate(e) {
 }
 
 export async function fetchUsers() {
-    const [{ data: users }, { data: nganhData }] = await Promise.all([
+    const [{ data: users, error: userErr }, { data: nganhData, error: nganhErr }] = await Promise.all([
         sb.from('user').select('*').order('ho_ten'),
         sb.from('san_pham').select('nganh, phu_trach')
     ]);
+    if (userErr) console.warn('fetchUsers user error:', userErr);
+    if (nganhErr) console.warn('fetchUsers nganh error:', nganhErr);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const safeUsers = (users || []).filter(u => u && u.gmail && emailRegex.test(u.gmail.trim()));
     const industryMap = new Map();
     (nganhData || []).forEach(item => { if (item.nganh && !industryMap.has(item.nganh)) industryMap.set(item.nganh, item.phu_trach || ''); });
     const enrichedNganh = Array.from(industryMap, ([nganh, pt]) => ({ id: nganh, label: nganh, subInfo: pt })).sort((a, b) => a.label.localeCompare(b.label));
-    cache.userList = users;
+    cache.userList = safeUsers;
+    cachedEnrichedNganh = enrichedNganh;
+
     // populate lastSeenMap from persisted DB values so last-online survives reloads
     try {
-        (users || []).forEach(u => {
+        safeUsers.forEach(u => {
             if (u && u.gmail && u.last_online_at) {
                 lastSeenMap.set(u.gmail, u.last_online_at);
             }
@@ -188,15 +276,59 @@ export async function fetchUsers() {
     } catch (e) {
         console.debug('populate lastSeenMap error', e);
     }
-    renderUserList(users, enrichedNganh);
+
+    // Xóa triệt để giá trị autofill mặc định của trình duyệt nếu có
+    const searchInput = document.getElementById('user-omni-search');
+    if (searchInput) {
+        if (searchInput.value === currentUser?.gmail || !currentSearchTerm) {
+            searchInput.value = '';
+            currentSearchTerm = '';
+            const searchClear = document.getElementById('user-omni-search-clear');
+            if (searchClear) searchClear.classList.add('hidden');
+        }
+    }
+
+    filterAndRenderUsers();
 }
 
-function renderUserList(users, allNganhEnriched) {
+export function filterAndRenderUsers() {
+    const rawUsers = cache.userList || [];
+    const term = currentSearchTerm.trim();
+    const filteredUsers = term ? rawUsers.filter(u => matchesUser(u, term)) : rawUsers;
+    renderUserList(filteredUsers, cachedEnrichedNganh, Boolean(term), rawUsers.length);
+}
+
+function renderUserList(users, allNganhEnriched, isSearching = false, totalCount = 0) {
     const container = document.getElementById('user-list-body');
     if (!container) return;
     container.innerHTML = '';
 
-    // Sắp xếp: online → away → offline
+    const totalBadge = document.getElementById('user-total-badge');
+    if (totalBadge) {
+        if (isSearching) {
+            totalBadge.textContent = `${users.length} / ${totalCount} thành viên`;
+        } else {
+            totalBadge.textContent = `${users.length} thành viên`;
+        }
+    }
+
+    if (users.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td colspan="6" class="py-10 text-center text-slate-400">
+                <div class="flex flex-col items-center justify-center gap-1.5">
+                    <svg class="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <span class="text-xs font-medium text-slate-500">Không tìm thấy thành viên nào phù hợp</span>
+                    <span class="text-[11px] text-slate-400">Thử tìm theo tên, email, vai trò, menu view hoặc ngành...</span>
+                </div>
+            </td>
+        `;
+        container.appendChild(tr);
+        return;
+    }
+
     const statusPriority = (gmail) => {
         const presence = onlineUsers.get(gmail);
         const status = presence ? (presence.status || 'online') : 'offline';
@@ -204,120 +336,147 @@ function renderUserList(users, allNganhEnriched) {
         if (status === 'away') return 1;
         return 2;
     };
-    const sortedUsers = [...users].sort((a, b) => statusPriority(a.gmail) - statusPriority(b.gmail));
+
+    const myEmail = String(currentUser?.gmail || '').trim().toLowerCase();
+
+    // Sắp xếp: Nếu người dùng cá nhân (currentUser) có trong danh sách hiển thị, luôn ưu tiên hiển thị ở TRÊN CÙNG
+    const sortedUsers = [...users].sort((a, b) => {
+        const aEmail = String(a.gmail || '').trim().toLowerCase();
+        const bEmail = String(b.gmail || '').trim().toLowerCase();
+        const aIsMe = aEmail === myEmail;
+        const bIsMe = bEmail === myEmail;
+        if (aIsMe) return -1;
+        if (bIsMe) return 1;
+        return statusPriority(a.gmail) - statusPriority(b.gmail);
+    });
 
     sortedUsers.forEach(user => {
-        const isMe = user.gmail === currentUser.gmail;
+        const userEmail = String(user.gmail || '').trim().toLowerCase();
+        const isMe = userEmail === myEmail;
         const viewCnt = (user.xem_view || '').split(',').filter(Boolean).length;
         const dataCnt = (user.xem_data || '').split(',').filter(Boolean).length;
         const isLocked = user.stt === 'Khóa';
 
-        // Kiểm tra trạng thái hiện diện (online/away) và thời gian hoạt động gần nhất
         const presence = onlineUsers.get(user.gmail);
         const status = presence ? (presence.status || 'online') : 'offline';
-        let statusDotClass = 'bg-gray-300'; // Mặc định offline
-        if (status === 'online') statusDotClass = 'bg-green-500';
-        else if (status === 'away') statusDotClass = 'bg-yellow-400';
+        let statusDotClass = 'bg-slate-300';
+        let statusBadgeText = 'Ngoại tuyến';
+        let statusTextClass = 'text-slate-500';
+
+        if (status === 'online') {
+            statusDotClass = 'bg-emerald-500';
+            statusBadgeText = 'Đang hoạt động';
+            statusTextClass = 'text-emerald-600 font-medium';
+        } else if (status === 'away') {
+            statusDotClass = 'bg-amber-400';
+            statusBadgeText = 'Vắng mặt';
+            statusTextClass = 'text-amber-600 font-medium';
+        }
+
         const lastSeenIso = (presence && presence.online_at) ? presence.online_at : (lastSeenMap.get(user.gmail) || '');
-        const lastSeenText = lastSeenIso ? formatTimeAgo(lastSeenIso) : '';
+        const lastSeenText = (status === 'offline' && lastSeenIso) ? ` • ${formatTimeAgo(lastSeenIso)}` : '';
 
-        const card = document.createElement('div');
-        card.className = `bg-white border ${isLocked ? 'border-red-100 bg-red-50/20' : 'border-gray-900'} rounded-xl p-3 shadow-sm transition-all hover:border-blue-500`;
+        const tr = document.createElement('tr');
+        tr.className = isMe 
+            ? 'bg-blue-50/50 hover:bg-blue-50/80 transition-colors' 
+            : (isLocked ? 'bg-red-50/30 hover:bg-red-50/50 transition-colors' : 'hover:bg-slate-50/80 transition-colors');
 
-        card.innerHTML = `
-            <div class="flex flex-col gap-3">
+        tr.innerHTML = `
+            <td class="py-2.5 px-3.5 whitespace-nowrap">
                 <div class="flex items-center gap-2.5">
                     <div class="relative flex-shrink-0">
-                        <img src="${user.anh_dai_dien_url || DEFAULT_AVATAR_URL}" class="w-10 h-10 rounded-full object-cover border border-white shadow-sm">
-                        <span class="absolute -bottom-0.5 -right-0.5 block h-2.5 w-2.5 rounded-full ${statusDotClass} ring-2 ring-white"></span>
+                        <img src="${user.anh_dai_dien_url || DEFAULT_AVATAR_URL}" class="w-8 h-8 rounded-full object-cover border border-slate-200">
+                        <span class="absolute -bottom-0.5 -right-0.5 block h-2 w-2 rounded-full ${statusDotClass} ring-2 ring-white"></span>
                     </div>
-                    <div class="flex-grow min-w-0">
-                        <h4 class="font-bold text-gray-900 text-sm truncate flex items-center gap-1">
-                            ${user.ho_ten}
-                            ${isLocked ? '<span class="text-[7px] bg-red-500 text-white px-1 py-0.5 rounded font-black">KHÓA</span>' : ''}
-                        </h4>
-                        <p class="text-[9px] text-gray-900 truncate">${user.gmail}</p>
-                    </div>
-                    <div class="relative">
-                        <button data-gmail="${user.gmail}" class="user-options-btn p-1.5 text-gray-900 hover:bg-gray-50 rounded-lg">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path></svg>
-                        </button>
-                        <div id="popover-${user.gmail.replace(/[@.]/g, '')}" class="hidden absolute right-0 top-8 w-40 bg-white rounded-xl shadow-2xl border border-gray-100 py-1.5 z-50 overflow-hidden">
-                            <button class="reset-password-btn flex items-center gap-2 w-full px-3 py-2 text-[10px] text-gray-600 hover:bg-blue-50" data-gmail="${user.gmail}">
-                                <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
-                                Reset mật khẩu
-                            </button>
-                            <button class="change-name-btn flex items-center gap-2 w-full px-3 py-2 text-[10px] text-gray-600 hover:bg-blue-50" data-gmail="${user.gmail}" data-name="${user.ho_ten}">
-                                <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                Đổi tên
-                            </button>
-                            <button class="copy-info-btn flex items-center gap-2 w-full px-3 py-2 text-[10px] text-gray-600 hover:bg-blue-50" data-gmail="${user.gmail}" data-pwd="${user.mat_khau}">
-                                <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                                Thông tin đăng nhập
-                            </button>
-                            <button class="user-status-option flex items-center gap-2 w-full px-3 py-2 text-[10px] ${isLocked ? 'text-green-600' : 'text-orange-600'} hover:bg-gray-50" data-gmail="${user.gmail}" data-status="${isLocked ? 'Đã Duyệt' : 'Khóa'}">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                                ${isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
-                            </button>
-                            <div class="h-px bg-gray-50 mx-2 my-1"></div>
-                            <button class="user-delete-option flex items-center gap-2 w-full px-3 py-2 text-[10px] text-red-500 font-bold hover:bg-red-50" data-gmail="${user.gmail}">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                Xóa vĩnh viễn
-                            </button>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-semibold text-slate-800 truncate">${user.ho_ten || 'Chưa đặt tên'}</span>
+                            ${isMe ? '<span class="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.2 rounded">Bạn</span>' : ''}
+                            ${isLocked ? '<span class="text-[10px] bg-red-100 text-red-600 font-bold px-1.5 py-0.2 rounded">Khóa</span>' : ''}
                         </div>
+                        <p class="text-[11px] text-slate-400 truncate">${user.gmail || ''}</p>
                     </div>
                 </div>
+            </td>
 
-                <div class="flex items-center justify-between px-1 bg-gray-50/50 rounded-lg p-1.5">
-                    <div class="flex flex-col">
-                        <span class="text-[7px] font-black text-gray-900 uppercase tracking-widest">Quyền hạn</span>
-                        <span class="text-[9px] font-bold ${status === 'offline' ? 'text-gray-900' : (status === 'away' ? 'text-yellow-500' : 'text-green-500')}">${status === 'offline' ? `Ngoại tuyến${lastSeenText ? ' • ' + lastSeenText : ''}` : (status === 'away' ? `Vắng mặt${lastSeenText ? ' • ' + lastSeenText : ''}` : 'Đang hoạt động')}</span>
-                    </div>
-                    <select data-gmail="${user.gmail}" class="user-role-select bg-white border border-gray-100 rounded-lg px-2 py-1 text-[11px] font-black text-blue-600 outline-none focus:ring-1 focus:ring-blue-500 shadow-sm" ${isMe ? 'disabled' : ''}>
-                        <option value="Admin" ${user.phan_quyen === 'Admin' ? 'selected' : ''}>Admin</option>
-                        <option value="User" ${user.phan_quyen === 'User' ? 'selected' : ''}>User</option>
-                        <option value="View" ${user.phan_quyen === 'View' ? 'selected' : ''}>View</option>
-                    </select>
+            <td class="py-2.5 px-3 whitespace-nowrap">
+                <div class="flex items-center gap-1.5 ${statusTextClass}">
+                    <span class="w-1.5 h-1.5 rounded-full ${statusDotClass}"></span>
+                    <span>${statusBadgeText}${lastSeenText}</span>
                 </div>
+            </td>
 
-                <div class="grid grid-cols-2 gap-2">
-                    <button class="trigger-view-list flex flex-col items-center gap-0.5 p-2 bg-gray-200 hover:bg-blue-50 border border-gray-100 rounded-xl transition-all active:scale-95" data-gmail="${user.gmail}">
-                        <span class="text-[7px] font-black text-gray-900 uppercase">Menu View</span>
-                        <div class="flex items-center justify-center gap-1 w-full">
-                            <span class="text-[11px] font-black text-gray-700">${viewCnt}</span>
-                            <svg class="w-2.5 h-2.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round"></path></svg>
-                        </div>
+            <td class="py-2.5 px-3 whitespace-nowrap">
+                <select data-gmail="${user.gmail}" class="user-role-select bg-white border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:ring-1 focus:ring-blue-600 focus:border-blue-600 transition-colors cursor-pointer" ${isMe ? 'disabled' : ''}>
+                    <option value="Admin" ${user.phan_quyen === 'Admin' ? 'selected' : ''}>Admin</option>
+                    <option value="User" ${user.phan_quyen === 'User' ? 'selected' : ''}>User</option>
+                    <option value="View" ${user.phan_quyen === 'View' ? 'selected' : ''}>View</option>
+                </select>
+            </td>
+
+            <td class="py-2.5 px-3 whitespace-nowrap text-center">
+                <button type="button" class="trigger-view-list inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md font-medium text-xs transition-colors" data-gmail="${user.gmail}">
+                    <span>${viewCnt} view</span>
+                    <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round"></path></svg>
+                </button>
+            </td>
+
+            <td class="py-2.5 px-3 whitespace-nowrap text-center">
+                <button type="button" class="trigger-data-list inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md font-medium text-xs transition-colors" data-gmail="${user.gmail}">
+                    <span>${dataCnt > 0 ? `${dataCnt} ngành` : (user.phan_quyen === 'Admin' ? 'Tất cả' : '0 ngành')}</span>
+                    <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round"></path></svg>
+                </button>
+            </td>
+
+            <td class="py-2.5 px-3 whitespace-nowrap text-right relative">
+                <button type="button" data-gmail="${user.gmail}" class="user-options-btn p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path></svg>
+                </button>
+                <div id="popover-${user.gmail.replace(/[@.]/g, '')}" class="hidden absolute right-3 top-9 w-40 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 text-left">
+                    <button class="change-name-btn flex items-center gap-2 w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50" data-gmail="${user.gmail}" data-name="${user.ho_ten}">
+                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        Đổi tên
                     </button>
-                    <button class="trigger-data-list flex flex-col items-center gap-0.5 p-2 bg-gray-200 hover:bg-blue-50 border border-gray-100 rounded-xl transition-all active:scale-95" data-gmail="${user.gmail}">
-                        <span class="text-[7px] font-black text-gray-900 uppercase">Dữ liệu ngành</span>
-                        <div class="flex items-center justify-center gap-1 w-full">
-                            <span class="text-[11px] font-black text-gray-700">${dataCnt}</span>
-                            <svg class="w-2.5 h-2.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round"></path></svg>
-                        </div>
+                    <div class="h-px bg-slate-100 my-1"></div>
+                    <button class="user-status-option flex items-center gap-2 w-full px-3 py-1.5 text-xs ${isLocked ? 'text-emerald-600' : 'text-amber-600'} hover:bg-slate-50" data-gmail="${user.gmail}" data-status="${isLocked ? 'Đã Duyệt' : 'Khóa'}">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        ${isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
+                    </button>
+                    <button class="user-delete-option flex items-center gap-2 w-full px-3 py-1.5 text-xs text-red-600 font-semibold hover:bg-red-50" data-gmail="${user.gmail}">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Xóa tài khoản
                     </button>
                 </div>
-            </div>
+            </td>
         `;
 
-        card.querySelector('.trigger-view-list').onclick = (e) => {
+        tr.querySelector('.trigger-view-list').onclick = (e) => {
             openMultiSelectDroplist(e.currentTarget, AVAILABLE_VIEWS, (user.xem_view || '').split(','), async (vals) => {
                 showLoading(true);
-                await sb.from('user').update({ xem_view: vals.join(',') }).eq('gmail', user.gmail);
-                fetchUsers();
+                const { error } = await sb.from('user').update({ xem_view: vals.join(',') }).eq('gmail', user.gmail);
+                if (!error) {
+                    user.xem_view = vals.join(',');
+                    filterAndRenderUsers();
+                    showToast("Đã cập nhật phân quyền view.", "success");
+                }
                 showLoading(false);
-            });
+            }, 'Phân quyền Menu View');
         };
 
-        card.querySelector('.trigger-data-list').onclick = (e) => {
+        tr.querySelector('.trigger-data-list').onclick = (e) => {
             openMultiSelectDroplist(e.currentTarget, allNganhEnriched, (user.xem_data || '').split(','), async (vals) => {
                 showLoading(true);
-                await sb.from('user').update({ xem_data: vals.join(',') }).eq('gmail', user.gmail);
-                fetchUsers();
+                const { error } = await sb.from('user').update({ xem_data: vals.join(',') }).eq('gmail', user.gmail);
+                if (!error) {
+                    user.xem_data = vals.join(',');
+                    filterAndRenderUsers();
+                    showToast("Đã cập nhật phân quyền ngành.", "success");
+                }
                 showLoading(false);
-            });
+            }, 'Phân quyền Dữ liệu Ngành');
         };
 
-        container.appendChild(card);
+        container.appendChild(tr);
     });
 }
 
@@ -335,26 +494,6 @@ async function handleDeleteUser(gmail) {
     const { error } = await sb.from('user').delete().eq('gmail', gmail);
     showLoading(false);
     if (!error) { showToast("Đã xóa.", 'success'); fetchUsers(); }
-}
-
-function openPasswordResetModal(gmail) {
-    document.getElementById('reset-user-gmail').value = gmail;
-    document.getElementById('reset-user-gmail-display').textContent = gmail;
-    document.getElementById('password-reset-modal').classList.remove('hidden');
-}
-
-async function handlePasswordReset(e) {
-    e.preventDefault();
-    const gmail = document.getElementById('reset-user-gmail').value;
-    const pwd = document.getElementById('reset-new-password').value;
-    showLoading(true);
-    const { error } = await sb.from('user').update({ mat_khau: pwd }).eq('gmail', gmail);
-    showLoading(false);
-    if (!error) {
-        showToast("Đã đổi MK.", 'success');
-        document.getElementById('password-reset-modal').classList.add('hidden');
-        document.getElementById('password-reset-form').reset();
-    }
 }
 
 export async function initProfileAvatarState() {
@@ -438,6 +577,45 @@ async function handleBackupExcel() {
 }
 
 export function initCaiDatView() {
+    // --- BỘ LỌC TÌM KIẾM ĐA NĂNG THÀNH VIÊN ---
+    const searchInput = document.getElementById('user-omni-search');
+    const searchClear = document.getElementById('user-omni-search-clear');
+
+    if (searchInput) {
+        // Xóa sạch giá trị tìm kiếm khi khởi tạo, tránh bị trình duyệt tự điền email cá nhân
+        searchInput.value = '';
+        currentSearchTerm = '';
+        if (searchClear) searchClear.classList.add('hidden');
+
+        searchInput.addEventListener('input', (e) => {
+            currentSearchTerm = e.target.value || '';
+            if (searchClear) searchClear.classList.toggle('hidden', !currentSearchTerm);
+            filterAndRenderUsers();
+        });
+
+        // Chống autofill trình duyệt tự động điền tài khoản đã lưu sau 100-200ms
+        setTimeout(() => {
+            if (searchInput.value === currentUser?.gmail || (!currentSearchTerm && searchInput.value.includes('@'))) {
+                searchInput.value = '';
+                currentSearchTerm = '';
+                if (searchClear) searchClear.classList.add('hidden');
+                filterAndRenderUsers();
+            }
+        }, 150);
+    }
+
+    if (searchClear) {
+        searchClear.addEventListener('click', () => {
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+            }
+            currentSearchTerm = '';
+            searchClear.classList.add('hidden');
+            filterAndRenderUsers();
+        });
+    }
+
     document.getElementById('profile-form').addEventListener('submit', handleProfileUpdate);
     document.getElementById('user-list-body').addEventListener('change', e => {
         if (e.target.classList.contains('user-role-select')) {
@@ -459,9 +637,6 @@ export function initCaiDatView() {
             document.getElementById(popId).classList.toggle('hidden');
             return;
         }
-        const resetBtn = e.target.closest('.reset-password-btn');
-        if (resetBtn) { openPasswordResetModal(resetBtn.dataset.gmail); return; }
-        
         const changeNameBtn = e.target.closest('.change-name-btn');
         if (changeNameBtn) {
             document.getElementById('change-name-gmail').value = changeNameBtn.dataset.gmail;
@@ -471,25 +646,12 @@ export function initCaiDatView() {
             return;
         }
 
-        const copyInfoBtn = e.target.closest('.copy-info-btn');
-        if (copyInfoBtn) {
-            const gmail = copyInfoBtn.dataset.gmail;
-            const pwd = copyInfoBtn.dataset.pwd;
-            document.getElementById('info-modal-gmail').textContent = gmail;
-            document.getElementById('info-modal-pwd').textContent = pwd;
-            document.getElementById('user-info-modal').classList.remove('hidden');
-            return;
-        }
-        
         const statusBtn = e.target.closest('.user-status-option');
         if (statusBtn) handleUpdateUserStatus(statusBtn.dataset.gmail, statusBtn.dataset.status);
         const delBtn = e.target.closest('.user-delete-option');
         if (delBtn) handleDeleteUser(delBtn.dataset.gmail);
     });
 
-    document.getElementById('password-reset-form').addEventListener('submit', handlePasswordReset);
-    document.getElementById('cancel-reset-btn').onclick = () => document.getElementById('password-reset-modal').classList.add('hidden');
-    
     document.getElementById('change-name-form').addEventListener('submit', async e => {
         e.preventDefault();
         const gmail = document.getElementById('change-name-gmail').value;
@@ -508,18 +670,6 @@ export function initCaiDatView() {
     });
     
     document.getElementById('cancel-change-name-btn').onclick = () => document.getElementById('change-name-modal').classList.add('hidden');
-    document.getElementById('close-info-modal-btn').onclick = () => document.getElementById('user-info-modal').classList.add('hidden');
-    
-    document.getElementById('copy-info-btn-action').onclick = () => {
-        const gmail = document.getElementById('info-modal-gmail').textContent;
-        const pwd = document.getElementById('info-modal-pwd').textContent;
-        const textToCopy = `Tên đăng nhập : ${gmail}\nMật Khẩu : ${pwd}`;
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            showToast("Đã copy tài khoản!", 'success');
-        }).catch(() => {
-            showToast("Không thể copy, vui lòng thử lại.", 'error');
-        });
-    };
     document.getElementById('backup-excel-btn').onclick = handleBackupExcel;
 
     const processAvatar = (file) => {
@@ -546,9 +696,29 @@ export function initCaiDatView() {
         document.getElementById('profile-current-avatar-url').value = '';
     };
 
+    document.getElementById('close-profile-modal-btn')?.addEventListener('click', closeProfileModal);
+    document.getElementById('profile-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'profile-modal') closeProfileModal();
+    });
+    document.getElementById('btn-open-profile-from-settings')?.addEventListener('click', openProfileModal);
+
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.user-options-btn') && !e.target.closest('[id^="popover-"]')) {
             document.querySelectorAll('[id^="popover-"]').forEach(p => p.classList.add('hidden'));
         }
     });
+}
+
+export function openProfileModal() {
+    const modal = document.getElementById('profile-modal');
+    if (!modal) return;
+    const hoTenInput = document.getElementById('profile-ho-ten');
+    if (hoTenInput && currentUser) hoTenInput.value = currentUser.ho_ten || '';
+    initProfileAvatarState();
+    modal.classList.remove('hidden');
+}
+
+export function closeProfileModal() {
+    const modal = document.getElementById('profile-modal');
+    if (modal) modal.classList.add('hidden');
 }

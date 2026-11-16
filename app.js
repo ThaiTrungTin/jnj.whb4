@@ -70,6 +70,16 @@ export const viewStates = {
         filters: { from_date: '', to_date: '', loai_don: '', trang_thai: '', loai: [], ma_kho: [], ma_nx: [], ma_vach: [], ma_vt: [], ten_vt: [], lot: [], date: [], nganh: [], phu_trach: [], yeu_cau: [], muc_dich: [] },
         totalFilteredCount: 0,
         paginationText: '',
+    },
+    'view-hang-no': {
+        currentPage: 1,
+        itemsPerPage: 50,
+        searchTerm: '',
+        filters: { yeu_cau: [], nganh: [] },
+        totalFilteredCount: 0,
+        paginationText: '',
+        sortCol: 'so_ngay',
+        sortDir: 'desc'
     }
 };
 let isViewInitialized = {
@@ -77,6 +87,7 @@ let isViewInitialized = {
     'view-san-pham': false,
     'view-ton-kho': false,
     'view-chi-tiet': false,
+    'view-hang-no': false,
     'view-cai-dat': false,
 };
 export const filterButtonDefaultTexts = {
@@ -707,22 +718,27 @@ async function handleLogout() {
     if (adminNotificationChannel) { await sb.removeChannel(adminNotificationChannel); adminNotificationChannel = null; }
     if (presenceChannel) { await sb.removeChannel(presenceChannel); presenceChannel = null; }
     if (dataChannel) { await sb.removeChannel(dataChannel); dataChannel = null; }
+    try { await sb.auth.signOut(); } catch (e) { console.debug(e); }
     sessionStorage.clear();
     window.location.href = 'login.html';
 }
 
 export function applyViewPermissions() {
     if (!currentUser) return;
+    const isAdmin = currentUser.phan_quyen === 'Admin';
     const allowedViewsStr = currentUser.xem_view || '';
     const allowedViews = allowedViewsStr.split(',').map(v => v.trim()).filter(Boolean);
     
     if (!allowedViews.includes('view-cai-dat')) {
         allowedViews.push('view-cai-dat');
     }
+    if (isAdmin && !allowedViews.includes('view-hang-no')) {
+        allowedViews.push('view-hang-no');
+    }
 
     document.querySelectorAll('.nav-button').forEach(btn => {
         const viewId = btn.dataset.view;
-        const isAllowed = allowedViews.includes(viewId);
+        const isAllowed = isAdmin || allowedViews.includes(viewId);
         
         if (isAllowed) {
             btn.classList.remove('hidden');
@@ -736,10 +752,11 @@ export function applyViewPermissions() {
 
 export async function showView(viewId) {
     if (currentUser) {
+        const isAdmin = currentUser.phan_quyen === 'Admin';
         const allowedViews = (currentUser.xem_view || '').split(',').map(v => v.trim()).filter(Boolean);
-        const managedViews = ['view-phat-trien', 'view-san-pham', 'view-ton-kho', 'view-chi-tiet'];
+        const managedViews = ['view-phat-trien', 'view-san-pham', 'view-ton-kho', 'view-chi-tiet', 'view-hang-no'];
         
-        if (managedViews.includes(viewId) && !allowedViews.includes(viewId)) {
+        if (!isAdmin && managedViews.includes(viewId) && !allowedViews.includes(viewId)) {
             const fallbackView = managedViews.find(v => allowedViews.includes(v)) || 'view-cai-dat';
             return showView(fallbackView);
         }
@@ -750,6 +767,7 @@ export async function showView(viewId) {
         'view-san-pham': 'Sản Phẩm',
         'view-ton-kho': 'Tồn Kho',
         'view-chi-tiet': 'Chi Tiết',
+        'view-hang-no': 'Hàng Nợ',
         'view-cai-dat': 'Cài Đặt',
     };
 
@@ -794,6 +812,7 @@ export async function showView(viewId) {
                 initCaiDatView();
                 const logoutBtn = document.getElementById('logout-btn');
                 if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+                    document.getElementById('profile-modal')?.classList.add('hidden');
                     const confirmed = await showConfirm('Bạn có chắc chắn muốn đăng xuất?', 'Xác nhận');
                     if (confirmed) handleLogout();
                 });
@@ -834,6 +853,14 @@ export async function showView(viewId) {
             }
             const { fetchChiTiet } = await import('./chitiet.js');
             await fetchChiTiet();
+        } else if (viewId === 'view-hang-no') {
+            if (!isViewInitialized['view-hang-no']) {
+                const { initHangNoView } = await import('./hangno.js');
+                initHangNoView();
+                isViewInitialized['view-hang-no'] = true;
+            }
+            const { fetchHangNo } = await import('./hangno.js');
+            await fetchHangNo();
         }
     } catch (error) {
         console.error(error);
@@ -1121,6 +1148,9 @@ function setupDataRealtime() {
         } else if (currentView === 'view-chi-tiet') {
             const { fetchChiTiet } = await import('./chitiet.js');
             await fetchChiTiet(viewStates['view-chi-tiet'].currentPage, false);
+        } else if (currentView === 'view-hang-no') {
+            const { fetchHangNo } = await import('./hangno.js');
+            await fetchHangNo(1, false);
         }
         showLoading(false);
     };
@@ -1146,6 +1176,8 @@ function setupDataRealtime() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ton_kho' }, () => handleRealtimeEvent('ton_kho'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'chi_tiet' }, () => handleRealtimeEvent('chi_tiet'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'chi_tiet_vt' }, () => handleRealtimeEvent('chi_tiet_vt'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'hang_no_timeline' }, () => handleRealtimeEvent('hang_no_timeline'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'hang_no_info' }, () => handleRealtimeEvent('hang_no_info'))
         .subscribe();
 }
 
@@ -1223,7 +1255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { id: 'image-viewer-modal', closeBtnId: 'close-image-viewer-btn' },
                 { id: 'confirm-modal', closeBtnId: 'confirm-cancel-btn' },
                 { id: 'excel-export-modal', closeBtnId: 'excel-export-cancel-btn' },
-                { id: 'password-reset-modal', closeBtnId: 'cancel-reset-btn' },
+                { id: 'change-name-modal', closeBtnId: 'cancel-change-name-btn' },
                 { id: 'san-pham-modal', closeBtnId: 'cancel-san-pham-btn' },
                 { id: 'ton-kho-modal', closeBtnId: 'cancel-ton-kho-btn' },
                 { id: 'ton-kho-settings-modal', closeBtnId: 'ton-kho-settings-cancel-btn' },
@@ -1248,9 +1280,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     try {
-        const userJson = sessionStorage.getItem('loggedInUser');
-        if (userJson) {
+        let userJson = sessionStorage.getItem('loggedInUser');
+        // Luôn đồng bộ quyền hạn và thông tin mới nhất từ database
+        const { data: { session } } = await sb.auth.getSession();
+        if (session && session.user && session.user.email) {
+            const { data: profile } = await sb.from('user').select('*').ilike('gmail', session.user.email).maybeSingle();
+            if (profile) {
+                if (profile.stt === 'Khóa') {
+                    await sb.auth.signOut();
+                    sessionStorage.clear();
+                    window.location.href = 'login.html';
+                    return;
+                }
+                currentUser = profile;
+                sessionStorage.setItem('loggedInUser', JSON.stringify(currentUser));
+                userJson = JSON.stringify(currentUser);
+            }
+        }
+        if (!currentUser && userJson) {
             currentUser = JSON.parse(userJson);
+        }
+        if (currentUser) {
             const hoTenEl = document.getElementById('user-ho-ten');
             const gmailEl = document.getElementById('user-gmail');
             if (hoTenEl) hoTenEl.textContent = currentUser.ho_ten || 'User';
@@ -1264,6 +1314,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('main-app')?.classList.remove('hidden');
             
             document.querySelectorAll('.nav-button').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view)));
+            
+            // Bấm vào thông tin/avatar cá nhân ở Sidebar để mở cửa sổ Thông tin cá nhân
+            document.getElementById('user-details')?.addEventListener('click', async () => {
+                const { openProfileModal, initCaiDatView } = await import('./caidat.js');
+                if (!isViewInitialized['view-cai-dat']) {
+                    initCaiDatView();
+                    isViewInitialized['view-cai-dat'] = true;
+                }
+                openProfileModal();
+            });
+
+            // Nút đăng xuất trong cửa sổ Thông tin cá nhân
+            document.getElementById('logout-btn')?.addEventListener('click', async () => {
+                document.getElementById('profile-modal')?.classList.add('hidden');
+                const confirmed = await showConfirm('Bạn có chắc chắn muốn đăng xuất?', 'Xác nhận');
+                if (confirmed) handleLogout();
+            });
             
             const lastView = sessionStorage.getItem('lastViewId') || 'view-phat-trien';
             await showView(lastView);

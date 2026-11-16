@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -8,227 +7,268 @@
     <link rel="icon" type="image/png" href="https://images.seeklogo.com/logo-png/50/1/johnson-johnson-logo-png_seeklogo-500414.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #f1f5f9; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .required-star { color: #ef4444; margin-left: 2px; }
-        
-        .nganh-item:hover { background-color: #f8fafc; }
-        .nganh-item input:checked + div { border-color: #3b82f6; background-color: #eff6ff; }
-        
-        #nganh-dropdown {
-            transform-origin: top;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        .otp-box { letter-spacing: 0.4em; text-align: center; font-size: 1.5rem; font-weight: 700; }
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
         }
-
-        /* Contact Modal Animation */
-        .contact-modal-overlay {
-            background-color: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-            transition: opacity 0.3s ease;
-        }
-        .contact-menu {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @media (max-width: 640px) {
-            .auth-card { border-radius: 24px !important; }
-            input, select, button { font-size: 16px !important; }
-            .text-title { font-size: 1.125rem !important; }
-            .contact-menu {
-                border-radius: 24px 24px 0 0 !important;
-                transform: translateY(100%);
-            }
-            .contact-menu.active { transform: translateY(0); }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="font-sans antialiased flex items-center justify-center min-h-screen p-3 sm:p-4">
+<body class="text-slate-800 antialiased min-h-screen flex items-center justify-center p-3 sm:p-4">
 
-    <!-- Loader -->
-    <div id="loading-container" class="flex flex-col items-center justify-center p-4">
-        <div class="loader"></div>
-        <p class="mt-3 text-slate-500 font-medium text-[11px] uppercase tracking-widest">Đang khởi động...</p>
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed top-4 right-4 left-4 sm:left-auto sm:max-w-md z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 transition-all">
+        <span id="toast-text" class="flex-1"></span>
+        <button type="button" onclick="hideToast()" class="text-slate-400 hover:text-slate-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
     </div>
 
-    <!-- Main Auth Card -->
-    <div id="main-layout" class="hidden w-full max-w-md mx-auto">
-        <div class="bg-white auth-card rounded-[32px] shadow-2xl overflow-hidden border border-slate-200">
-            <div class="p-6 sm:p-8">
-                <!-- App Identity -->
-                <div class="text-center mb-6 sm:mb-8">
-                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTqynYNg47oA46x0qg7yA28QtHrT2kPgD3WTA&s" alt="Logo" class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 rounded-full shadow-md border-2 border-white">
-                    <h1 class="text-title text-lg sm:text-xl font-black text-slate-800 uppercase tracking-tight leading-tight">Báo Cáo Tồn Kho Hàng Mẫu</h1>
-                    <p class="text-[9px] sm:text-[10px] text-slate-400 font-bold mt-1 tracking-widest uppercase">Internal Logistics System</p>
-                </div>
+    <!-- Main Card -->
+    <div class="w-full max-w-[420px] bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        
+        <!-- Header -->
+        <div class="px-6 pt-7 pb-4 text-center border-b border-slate-100">
+            <img src="https://images.seeklogo.com/logo-png/50/1/johnson-johnson-logo-png_seeklogo-500414.png" alt="Johnson & Johnson" class="h-9 mx-auto mb-2.5 object-contain">
+            <h1 class="text-base font-bold text-slate-800">Báo Cáo Tồn Kho Hàng Mẫu</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Hệ thống quản lý nội bộ</p>
+        </div>
 
-                <div id="auth-container">
-                    <!-- Login Form -->
-                    <form id="login-form">
-                        <div class="space-y-4">
-                            <div>
-                                <label for="login-gmail" class="block text-slate-700 text-[10px] font-bold uppercase mb-1.5 ml-1">Tên đăng nhập / Gmail <span class="required-star">*</span></label>
-                                <input type="text" id="login-gmail" required placeholder="Nhập Gmail của bạn..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm">
-                            </div>
-                            <div>
-                                <label for="login-password" class="block text-slate-700 text-[10px] font-bold uppercase mb-1.5 ml-1">Mật khẩu <span class="required-star">*</span></label>
-                                <div class="relative">
-                                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm pr-11">
-                                    <button type="button" data-toggle-password="login-password" class="password-toggle-btn absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400 hover:text-blue-500">
-                                        <svg class="w-5 h-5 toggle-icon-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                        <svg class="w-5 h-5 toggle-icon-hide hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="flex items-center ml-1">
-                                <input type="checkbox" id="login-remember-me" class="w-4 h-4 text-blue-600 rounded border-slate-300">
-                                <label for="login-remember-me" class="ml-2 text-[11px] text-slate-500 font-medium">Ghi nhớ đăng nhập</label>
-                            </div>
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-100 transition-all active:scale-95 text-sm uppercase tracking-wider mt-2">Đăng nhập ngay</button>
-                        </div>
-                        <p class="text-center text-slate-500 text-[11px] mt-6 font-medium">Bạn chưa có tài khoản? <button type="button" id="show-register-btn" class="text-blue-600 font-bold hover:underline">Đăng ký mới</button></p>
-                    </form>
-
-                    <!-- Register Form -->
-                    <form id="register-form" class="hidden">
-                        <div class="space-y-3.5">
-                            <div>
-                                <label for="register-role" class="block text-slate-700 text-[10px] font-bold uppercase mb-1.5 ml-1">Vai trò thành viên <span class="required-star">*</span></label>
-                                <select id="register-role" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold text-slate-700 transition-all">
-                                    <option value="View">VIEW (Chỉ xem tồn kho)</option>
-                                    <option value="User">USER (Xem tồn kho & Chi tiết)</option>
-                                </select>
-                            </div>
-
-                            <!-- Nganh selection Droplist -->
-                            <div id="nganh-selection-wrapper" class="hidden animate-in fade-in slide-in-from-top-2 duration-300">
-                                <label class="block text-slate-700 text-[10px] font-bold uppercase mb-1.5 ml-1">Chọn ngành phụ trách (Không bắt buộc)</label>
-                                <div class="relative">
-                                    <button type="button" id="nganh-dropdown-btn" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all">
-                                        <span id="nganh-btn-text" class="truncate">Bấm để chọn ngành...</span>
-                                        <svg class="w-4 h-4 text-slate-400 ml-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                                    </button>
-                                    
-                                    <div id="nganh-dropdown" class="hidden absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                                        <div class="p-2 border-b border-slate-100 bg-white">
-                                            <input type="text" id="nganh-search" placeholder="Tìm tên ngành hoặc người phụ trách..." class="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                        </div>
-                                        <div id="nganh-list-container" class="max-h-48 overflow-y-auto no-scrollbar p-1 space-y-0.5 bg-white">
-                                            <p class="text-[10px] text-slate-400 italic p-6 text-center">Đang tải danh sách ngành...</p>
-                                        </div>
-                                        <div class="p-2.5 bg-slate-50 flex justify-between items-center border-t border-slate-100 gap-2">
-                                            <span id="nganh-count-badge" class="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 truncate">Chưa chọn</span>
-                                            <div class="flex items-center gap-2">
-                                                <button type="button" id="nganh-deselect-all-btn" class="text-red-500 hover:text-red-600 text-[9px] font-black uppercase whitespace-nowrap px-1">Xóa hết</button>
-                                                <button type="button" id="nganh-confirm-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-[10px] font-black shadow-sm hover:bg-blue-700 transition-all uppercase">Xong</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label for="register-gmail" class="block text-slate-700 text-[10px] font-bold uppercase mb-1.5 ml-1">Tên đăng nhập <span class="required-star">*</span></label>
-                                <input type="text" id="register-gmail" required placeholder="Ví dụ: gaconpro123" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                            </div>
-                            <div>
-                                <label for="register-ho-ten" class="block text-slate-700 text-[10px] font-bold uppercase mb-1.5 ml-1">Họ và Tên <span class="required-star">*</span></label>
-                                <input type="text" id="register-ho-ten" required placeholder="Nhập đầy đủ họ tên..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                            </div>
-                            <div>
-                                <label for="register-password" class="block text-slate-700 text-[10px] font-bold uppercase mb-1.5 ml-1">Mật khẩu <span class="required-star">*</span></label>
-                                <input type="password" id="register-password" required placeholder="Ít nhất 6 ký tự..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                            </div>
-                            <div>
-                                <label for="register-confirm-password" class="block text-slate-700 text-[10px] font-bold uppercase mb-1.5 ml-1">Xác nhận mật khẩu <span class="required-star">*</span></label>
-                                <input type="password" id="register-confirm-password" required placeholder="Nhập lại mật khẩu..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                            </div>
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 text-sm mt-2 uppercase tracking-wider">Xác nhận đăng ký</button>
-                        </div>
-                        <p class="text-center text-slate-500 text-[11px] mt-6 font-medium">Đã có tài khoản? <button type="button" id="show-login-btn" class="text-blue-600 font-bold hover:underline">Quay lại đăng nhập</button></p>
-                    </form>
-                </div>
-            </div>
+        <div class="p-6">
             
-            <!-- Developer Info Footer -->
-            <div class="bg-slate-50 p-5 border-t border-slate-100 text-center">
-                <p class="text-[9px] font-bold text-slate-400 tracking-[0.2em] uppercase mb-2">Internal Support System</p>
-                <div class="flex flex-col items-center gap-1">
-                    <p class="text-[10px] text-slate-500 font-medium">
-                        Phát triển bởi <span class="font-bold text-slate-800">ThaiTrungTin</span>
+            <!-- 1. VIEW ĐĂNG NHẬP -->
+            <div id="view-login">
+                <form id="form-login" class="space-y-4" autocomplete="off">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email <span class="text-red-500">*</span></label>
+                        <input type="email" id="login-email" required autocomplete="off" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-semibold text-slate-700">Mật khẩu <span class="text-red-500">*</span></label>
+                            <button type="button" onclick="switchView('forgot')" class="text-xs text-blue-600 hover:underline">Quên mật khẩu?</button>
+                        </div>
+                        <div class="relative">
+                            <input type="password" id="login-password" required autocomplete="current-password" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors pr-10">
+                            <button type="button" onclick="togglePassword('login-password')" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-slate-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" id="login-remember" class="w-4 h-4 text-blue-600 rounded border-slate-300">
+                        <label for="login-remember" class="ml-2 text-xs text-slate-600 cursor-pointer">Ghi nhớ đăng nhập</label>
+                    </div>
+
+                    <button type="submit" id="btn-login" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2">
+                        <span>Đăng nhập</span>
+                    </button>
+                </form>
+
+                <div class="mt-5 pt-4 border-t border-slate-100 text-center">
+                    <p class="text-xs text-slate-600">
+                        Chưa có tài khoản? 
+                        <button type="button" onclick="switchView('register')" class="text-blue-600 font-semibold hover:underline">Đăng ký mới</button>
                     </p>
-                    <button type="button" id="open-contact-btn" class="mt-2 flex items-center gap-2 px-6 py-2 bg-white border border-slate-200 rounded-full text-[11px] font-bold text-blue-600 hover:bg-blue-50 transition-all shadow-sm active:scale-95">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                        LIÊN HỆ HỖ TRỢ
-                    </button>
                 </div>
             </div>
+
+            <!-- 2. VIEW ĐĂNG KÝ -->
+            <div id="view-register" class="hidden">
+                <div class="mb-4">
+                    <h2 class="text-sm font-bold text-slate-800">Tạo tài khoản mới</h2>
+                    <p class="text-xs text-slate-500">Mã xác thực OTP sẽ được gửi về email của bạn</p>
+                </div>
+
+                <form id="form-register" class="space-y-3.5" autocomplete="off">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email <span class="text-red-500">*</span></label>
+                        <input type="email" id="reg-email" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                        <p id="reg-email-error" class="hidden text-xs text-red-600 mt-1 font-medium"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Họ và Tên <span class="text-red-500">*</span> <span class="text-[11px] font-normal text-slate-500">(Tên viết hoa đủ dấu)</span></label>
+                        <input type="text" id="reg-ho-ten" required autocomplete="off" autocorrect="off" spellcheck="false" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Vai trò thành viên <span class="text-red-500">*</span></label>
+                        <select id="reg-role" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                            <option value="View">VIEW (Chỉ xem tồn kho)</option>
+                            <option value="User">USER (Xem tồn kho & Chi tiết)</option>
+                        </select>
+                    </div>
+
+                    <!-- Dropdown ngành (chỉ hiện khi chọn USER) -->
+                    <div id="reg-nganh-wrapper" class="hidden">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Chọn ngành phụ trách (Không bắt buộc)</label>
+                        <div class="relative">
+                            <button type="button" id="reg-nganh-btn" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg flex justify-between items-center text-slate-700 hover:bg-slate-100 transition-colors">
+                                <span id="reg-nganh-text" class="truncate">Bấm để chọn ngành...</span>
+                                <svg class="w-4 h-4 text-slate-400 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                            </button>
+                            
+                            <div id="reg-nganh-dropdown" class="hidden absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                                <div class="p-2 border-b border-slate-100 bg-slate-50">
+                                    <input type="text" id="reg-nganh-search" placeholder="Tìm tên ngành..." autocomplete="off" class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600">
+                                </div>
+                                <div id="reg-nganh-list" class="max-h-44 overflow-y-auto no-scrollbar p-1 text-xs space-y-0.5">
+                                    <p class="text-slate-400 italic p-3 text-center">Đang tải danh sách ngành...</p>
+                                </div>
+                                <div class="p-2 bg-slate-50 flex justify-between items-center border-t border-slate-100">
+                                    <button type="button" id="reg-nganh-clear" class="text-xs text-red-500 font-semibold px-2 py-1">Bỏ chọn hết</button>
+                                    <button type="button" id="reg-nganh-done" class="px-3 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700">Xong</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu <span class="text-red-500">*</span></label>
+                        <input type="password" id="reg-password" required autocomplete="new-password" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Xác nhận mật khẩu <span class="text-red-500">*</span></label>
+                        <input type="password" id="reg-confirm-password" required autocomplete="new-password" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                    </div>
+
+                    <button type="submit" id="btn-register" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 mt-2">
+                        <span>Đăng ký & Nhận mã OTP</span>
+                    </button>
+                </form>
+
+                <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+                    <p class="text-xs text-slate-600">
+                        Đã có tài khoản? 
+                        <button type="button" onclick="switchView('login')" class="text-blue-600 font-semibold hover:underline">Quay lại đăng nhập</button>
+                    </p>
+                </div>
+            </div>
+
+            <!-- 3. VIEW XÁC THỰC MÃ OTP -->
+            <div id="view-otp" class="hidden">
+                <div class="text-center mb-5">
+                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2.5">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h2 class="text-base font-bold text-slate-800">Xác thực mã OTP</h2>
+                    <p class="text-xs text-slate-500 mt-1">Mã xác thực 6 số đã được gửi đến:</p>
+                    <p id="otp-target-email" class="text-xs font-semibold text-slate-800 break-all"></p>
+                    <p class="text-[11px] text-amber-600 mt-1 italic">(Kiểm tra cả hộp thư Đến và mục Spam / Thư rác)</p>
+                </div>
+
+                <form id="form-otp" class="space-y-4">
+                    <div>
+                        <input type="text" id="otp-input" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" required placeholder="------" class="otp-box w-full py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-slate-800 transition-colors">
+                    </div>
+
+                    <button type="submit" id="btn-verify-otp" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2">
+                        <span>Xác nhận</span>
+                    </button>
+                </form>
+
+                <div class="mt-4 flex items-center justify-between text-xs">
+                    <button type="button" onclick="switchView('login')" class="text-slate-500 hover:text-slate-700">← Quay lại</button>
+                    <button type="button" id="btn-resend-otp" onclick="resendOtp()" class="text-blue-600 font-semibold hover:underline">Gửi lại mã</button>
+                </div>
+            </div>
+
+            <!-- 4. VIEW QUÊN MẬT KHẨU -->
+            <div id="view-forgot" class="hidden">
+                <div class="mb-4">
+                    <h2 class="text-sm font-bold text-slate-800">Khôi phục mật khẩu</h2>
+                    <p class="text-xs text-slate-500">Nhập email tài khoản để nhận mã OTP đặt lại mật khẩu</p>
+                </div>
+
+                <form id="form-forgot" class="space-y-4" autocomplete="off">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email tài khoản <span class="text-red-500">*</span></label>
+                        <input type="email" id="forgot-email" required autocomplete="off" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                    </div>
+
+                    <button type="submit" id="btn-forgot" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2">
+                        <span>Gửi mã OTP qua Email</span>
+                    </button>
+                </form>
+
+                <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+                    <button type="button" onclick="switchView('login')" class="text-xs text-slate-600 hover:text-slate-800 font-medium">← Quay lại đăng nhập</button>
+                </div>
+            </div>
+
+            <!-- 5. VIEW ĐẶT LẠI MẬT KHẨU MỚI -->
+            <div id="view-reset-password" class="hidden">
+                <div class="mb-4">
+                    <h2 class="text-sm font-bold text-slate-800">Đặt mật khẩu mới</h2>
+                    <p class="text-xs text-slate-500">Tạo mật khẩu mới cho tài khoản của bạn</p>
+                </div>
+
+                <form id="form-reset-password" class="space-y-3.5" autocomplete="off">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Mật khẩu mới <span class="text-red-500">*</span></label>
+                        <input type="password" id="reset-new-password" required autocomplete="new-password" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Xác nhận mật khẩu mới <span class="text-red-500">*</span></label>
+                        <input type="password" id="reset-confirm-password" required autocomplete="new-password" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
+                    </div>
+
+                    <button type="submit" id="btn-save-password" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 mt-2">
+                        <span>Lưu mật khẩu & Đăng nhập</span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- Footer / Hỗ trợ -->
+        <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Phát triển bởi Thái Trung Tín - Kho B4</span>
+            <button type="button" onclick="openContactModal()" class="text-blue-600 hover:underline font-semibold">Liên hệ</button>
         </div>
     </div>
 
-    <!-- Contact Support Menu Modal -->
-    <div id="contact-modal" class="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="contact-modal-overlay absolute inset-0"></div>
-        <div class="contact-menu relative w-full sm:max-w-xs bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden animate-in">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-sm font-black text-slate-800 uppercase tracking-wider">Hỗ trợ kỹ thuật</h3>
-                    <button id="close-contact-btn" class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                
-                <div class="space-y-3">
-                    <a href="tel:0364605514" class="flex items-center gap-4 p-4 bg-slate-50 hover:bg-blue-50 rounded-2xl transition-all group">
-                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
-                        </div>
-                        <div>
-                            <p class="text-xs font-black text-slate-800">GỌI ĐIỆN TRỰC TIẾP</p>
-                            <p class="text-[11px] text-slate-500 font-medium">0364 605 514</p>
-                        </div>
-                    </a>
-
-                    <a href="https://zalo.me/0364605514" target="_blank" class="flex items-center gap-4 p-4 bg-slate-50 hover:bg-sky-50 rounded-2xl transition-all group">
-                        <div class="w-10 h-10 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center group-hover:bg-sky-600 group-hover:text-white transition-all font-bold text-xs italic">Zalo</div>
-                        <div>
-                            <p class="text-xs font-black text-slate-800">NHẮN TIN ZALO</p>
-                            <p class="text-[11px] text-slate-500 font-medium">ThaiTrungTin</p>
-                        </div>
-                    </a>
-
-                    <a href="mailto:whb4@its.jnj.com" class="flex items-center gap-4 p-4 bg-slate-50 hover:bg-rose-50 rounded-2xl transition-all group">
-                        <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-all">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                        </div>
-                        <div>
-                            <p class="text-xs font-black text-slate-800">GỬI EMAIL HỖ TRỢ</p>
-                            <p class="text-[11px] text-slate-500 font-medium break-all">whb4@its.jnj.com</p>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="mt-6 text-center">
-                    <p class="text-[9px] font-bold text-slate-300 uppercase tracking-widest leading-relaxed">Phản hồi trong 2-4 giờ làm việc</p>
-                </div>
+    <!-- Contact Modal -->
+    <div id="contact-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-xs overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-sm font-bold text-slate-800">Thông tin hỗ trợ</h3>
+                <button onclick="closeContactModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div class="p-5 space-y-3 text-xs">
+                <a href="tel:0364605514" class="flex items-center gap-3 p-2.5 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-700 transition-colors">
+                    <span class="font-bold">Điện thoại:</span>
+                    <span class="text-blue-600 font-semibold">0364 605 514</span>
+                </a>
+                <a href="https://zalo.me/0364605514" target="_blank" class="flex items-center gap-3 p-2.5 rounded-lg bg-slate-50 hover:bg-sky-50 text-slate-700 transition-colors">
+                    <span class="font-bold">Zalo:</span>
+                    <span class="text-sky-600 font-semibold">ThaiTrungTin</span>
+                </a>
+                <a href="mailto:whb4@its.jnj.com" class="flex items-center gap-3 p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors break-all">
+                    <span class="font-bold">Email:</span>
+                    <span class="text-slate-600">whb4@its.jnj.com</span>
+                </a>
             </div>
         </div>
     </div>
-
-    <!-- Message notification -->
-    <div id="message-container" class="hidden fixed top-5 right-5 left-5 md:left-auto bg-blue-600 text-white py-3 px-6 rounded-2xl shadow-2xl z-[110] text-sm font-bold text-center md:text-left animate-in slide-in-from-top-4"></div>
 
     <script>
         const { createClient } = supabase;
@@ -236,222 +276,496 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVlZnlkbmVmcHJjYW5ubHZpaW1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNTcwMDUsImV4cCI6MjA3NjYzMzAwNX0.X274J_1_crUknJEOT1WWUD1h0HM9WdYScDW2eWWsiLk";
         const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        let currentPendingEmail = '';
+        let currentOtpType = 'signup'; // 'signup' hoặc 'recovery'
+        let resendTimer = null;
+        let resendCountdown = 60;
         let industriesData = [];
 
-        function showMessage(message, isError = true) {
-            const container = document.getElementById('message-container');
-            container.textContent = message;
-            container.className = isError 
-                ? "fixed top-5 right-5 left-5 md:left-auto bg-red-500 text-white py-3 px-6 rounded-2xl shadow-2xl z-[110] text-sm font-bold text-center md:text-left"
-                : "fixed top-5 right-5 left-5 md:left-auto bg-green-600 text-white py-3 px-6 rounded-2xl shadow-2xl z-[110] text-sm font-bold text-center md:text-left";
-            container.classList.remove('hidden');
-            setTimeout(() => container.classList.add('hidden'), 4000);
+        // Toast
+        let toastTimeout = null;
+        function showMessage(text, isError = true) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toast-text');
+            toastText.textContent = text;
+            toast.className = isError
+                ? "fixed top-4 right-4 left-4 sm:left-auto sm:max-w-md z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 bg-red-600 text-white transition-all"
+                : "fixed top-4 right-4 left-4 sm:left-auto sm:max-w-md z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 bg-emerald-600 text-white transition-all";
+            toast.classList.remove('hidden');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(hideToast, 5000);
+        }
+        function hideToast() {
+            document.getElementById('toast').classList.add('hidden');
         }
 
+        function setButtonLoading(btnId, isLoading, defaultText) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            btn.disabled = isLoading;
+            btn.innerHTML = isLoading 
+                ? '<div class="spinner"></div><span>Đang xử lý...</span>' 
+                : `<span>${defaultText}</span>`;
+        }
+
+        // Chuyển màn hình
+        function switchView(viewName) {
+            const views = ['login', 'register', 'otp', 'forgot', 'reset-password'];
+            views.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.toggle('hidden', v !== viewName);
+            });
+            hideToast();
+        }
+
+        function togglePassword(inputId) {
+            const el = document.getElementById(inputId);
+            if (el) el.type = el.type === 'password' ? 'text' : 'password';
+        }
+
+        // Tải danh sách ngành cho form đăng ký
         async function fetchIndustries() {
             try {
                 const { data, error } = await sb.from('san_pham').select('nganh, phu_trach');
                 if (error) throw error;
-                const industryMap = new Map();
+                const map = new Map();
                 data.forEach(item => {
-                    if (item.nganh && !industryMap.has(item.nganh)) {
-                        industryMap.set(item.nganh, item.phu_trach || 'Chưa rõ');
+                    if (item.nganh && !map.has(item.nganh)) {
+                        map.set(item.nganh, item.phu_trach || 'Chưa rõ');
                     }
                 });
-                industriesData = Array.from(industryMap.entries()).map(([nganh, phu_trach]) => ({ nganh, phu_trach }));
+                industriesData = Array.from(map.entries()).map(([nganh, phu_trach]) => ({ nganh, phu_trach }));
                 industriesData.sort((a, b) => a.nganh.localeCompare(b.nganh));
                 renderIndustries('');
-            } catch (err) { console.error("Lỗi tải ngành:", err); }
+            } catch (err) {
+                console.error("Lỗi tải ngành:", err);
+            }
         }
 
         function renderIndustries(filter) {
-            const container = document.getElementById('nganh-list-container');
-            const searchTerm = filter.toLowerCase();
-            const filtered = industriesData.filter(item => 
-                item.nganh.toLowerCase().includes(searchTerm) || 
-                item.phu_trach.toLowerCase().includes(searchTerm)
-            );
-            if (filtered.length === 0) {
-                container.innerHTML = '<p class="text-[10px] text-slate-400 italic p-6 text-center">Không tìm thấy kết quả.</p>';
+            const container = document.getElementById('reg-nganh-list');
+            const search = (filter || '').toLowerCase();
+            const list = industriesData.filter(i => i.nganh.toLowerCase().includes(search) || i.phu_trach.toLowerCase().includes(search));
+            if (list.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 italic p-3 text-center">Không tìm thấy ngành.</p>';
                 return;
             }
-            container.innerHTML = filtered.map(item => `
-                <label class="nganh-item block cursor-pointer group px-1">
-                    <input type="checkbox" name="register-nganh" value="${item.nganh}" class="hidden">
-                    <div class="flex items-center justify-between p-3 rounded-xl border border-transparent transition-all group-active:scale-[0.97]">
-                        <div class="flex-grow min-w-0 pr-2 text-left">
-                            <p class="text-[12px] font-bold text-slate-700 truncate leading-tight">${item.nganh}</p>
-                            <p class="text-[10px] text-slate-400 italic truncate font-medium mt-0.5">Phụ trách: ${item.phu_trach}</p>
-                        </div>
-                        <div class="flex-shrink-0 w-4.5 h-4.5 rounded border-2 border-slate-200 flex items-center justify-center group-hover:border-blue-300 transition-colors bg-white">
-                            <svg class="w-3 h-3 text-blue-600 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
-                        </div>
-                    </div>
+            container.innerHTML = list.map(item => `
+                <label class="flex items-center justify-between p-2 rounded hover:bg-slate-50 cursor-pointer">
+                    <span class="text-slate-700 font-medium">${item.nganh} <span class="text-slate-400 font-normal">(${item.phu_trach})</span></span>
+                    <input type="checkbox" name="reg-nganh" value="${item.nganh}" class="w-4 h-4 text-blue-600 rounded border-slate-300">
                 </label>
             `).join('');
-            container.querySelectorAll('label').forEach(label => {
-                label.onclick = (e) => {
-                    e.preventDefault();
-                    const checkbox = label.querySelector('input');
-                    checkbox.checked = !checkbox.checked;
-                    label.querySelector('svg').classList.toggle('hidden', !checkbox.checked);
-                    label.querySelector('div').classList.toggle('border-blue-200', checkbox.checked);
-                    label.querySelector('div').classList.toggle('bg-blue-50', checkbox.checked);
-                    updateNganhBadge();
-                };
+
+            container.querySelectorAll('input[name="reg-nganh"]').forEach(cb => {
+                cb.addEventListener('change', updateNganhText);
             });
         }
 
-        function updateNganhBadge() {
-            const selected = Array.from(document.querySelectorAll('input[name="register-nganh"]:checked'));
-            const badge = document.getElementById('nganh-count-badge');
-            const btnText = document.getElementById('nganh-btn-text');
-            if (selected.length > 0) {
-                badge.textContent = `Đã chọn ${selected.length}`;
-                badge.classList.replace('text-slate-400', 'text-blue-600');
-                btnText.textContent = `Đã chọn: ${selected[0].value}${selected.length > 1 ? '... (+' + (selected.length - 1) + ')' : ''}`;
-                btnText.classList.replace('text-slate-600', 'text-blue-700');
-                btnText.classList.add('font-bold');
+        function updateNganhText() {
+            const checked = Array.from(document.querySelectorAll('input[name="reg-nganh"]:checked')).map(c => c.value);
+            const textEl = document.getElementById('reg-nganh-text');
+            if (checked.length === 0) {
+                textEl.textContent = 'Bấm để chọn ngành...';
+                textEl.className = 'truncate text-slate-700';
             } else {
-                badge.textContent = `Chưa chọn`;
-                badge.classList.replace('text-blue-600', 'text-slate-400');
-                btnText.textContent = `Bấm để chọn ngành...`;
-                btnText.classList.replace('text-blue-700', 'text-slate-600');
-                btnText.classList.remove('font-bold');
+                textEl.textContent = `Đã chọn: ${checked.join(', ')}`;
+                textEl.className = 'truncate text-blue-700 font-medium';
             }
         }
 
-        async function handleLogin(e) {
+        function startOtpCountdown() {
+            const btn = document.getElementById('btn-resend-otp');
+            resendCountdown = 60;
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            if (resendTimer) clearInterval(resendTimer);
+            btn.textContent = `Gửi lại mã (${resendCountdown}s)`;
+            resendTimer = setInterval(() => {
+                resendCountdown--;
+                if (resendCountdown <= 0) {
+                    clearInterval(resendTimer);
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    btn.textContent = 'Gửi lại mã';
+                } else {
+                    btn.textContent = `Gửi lại mã (${resendCountdown}s)`;
+                }
+            }, 1000);
+        }
+
+        async function resendOtp() {
+            if (!currentPendingEmail) return;
+            setButtonLoading('btn-resend-otp', true, 'Gửi lại mã');
+            try {
+                if (currentOtpType === 'signup') {
+                    const { error } = await sb.auth.resend({
+                        type: 'signup',
+                        email: currentPendingEmail
+                    });
+                    if (error) throw error;
+                } else {
+                    const { error } = await sb.auth.resetPasswordForEmail(currentPendingEmail);
+                    if (error) throw error;
+                }
+                showMessage('Đã gửi lại mã OTP. Vui lòng kiểm tra email!', false);
+                startOtpCountdown();
+            } catch (err) {
+                showMessage('Lỗi gửi lại mã: ' + err.message);
+                setButtonLoading('btn-resend-otp', false, 'Gửi lại mã');
+            }
+        }
+
+        // ================= XỬ LÝ SỰ KIỆN FORM =================
+
+        // 1. ĐĂNG NHẬP
+        document.getElementById('form-login').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const identifier = document.getElementById('login-gmail').value.trim();
+            const email = document.getElementById('login-email').value.trim().toLowerCase();
             const password = document.getElementById('login-password').value;
-            const rememberMe = document.getElementById('login-remember-me').checked;
-            const { data: user, error } = await sb.rpc('login_user', { identifier, password });
-            if (error) return showMessage('Lỗi hệ thống: ' + error.message);
-            if (user.error) return showMessage(user.error);
-            if (user.stt === 'Khóa') return showMessage('Tài khoản của bạn đã bị khóa.');
-            if (rememberMe) localStorage.setItem('rememberedCredentials', JSON.stringify({ identifier, password }));
-            else localStorage.removeItem('rememberedCredentials');
-            sessionStorage.setItem('loggedInUser', JSON.stringify(user));
-            window.location.href = 'index.html';
+            const remember = document.getElementById('login-remember').checked;
+
+            setButtonLoading('btn-login', true, 'Đăng nhập');
+            try {
+                const { data, error } = await sb.auth.signInWithPassword({ email, password });
+                if (error) {
+                    if (error.message.includes('Email not confirmed')) {
+                        currentPendingEmail = email;
+                        currentOtpType = 'signup';
+                        document.getElementById('otp-target-email').textContent = email;
+                        switchView('otp');
+                        startOtpCountdown();
+                        throw new Error('Email chưa xác thực OTP. Vui lòng nhập mã OTP để kích hoạt tài khoản.');
+                    }
+                    if (error.message === 'Invalid login credentials') {
+                        throw new Error('Email hoặc mật khẩu không chính xác.');
+                    }
+                    throw error;
+                }
+
+                // Lấy thông tin quyền từ public.user (không phân biệt hoa thường)
+                const { data: profile } = await sb.from('user').select('*').ilike('gmail', email).maybeSingle();
+                if (profile && profile.stt === 'Khóa') {
+                    await sb.auth.signOut();
+                    throw new Error('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
+                }
+
+                if (remember) {
+                    localStorage.setItem('rememberedEmail', email);
+                } else {
+                    localStorage.removeItem('rememberedEmail');
+                }
+
+                const userToSave = profile || {
+                    gmail: email,
+                    ho_ten: data.user.user_metadata?.ho_ten || email.split('@')[0],
+                    phan_quyen: data.user.user_metadata?.phan_quyen || 'View',
+                    xem_view: data.user.user_metadata?.xem_view || 'view-ton-kho',
+                    xem_data: data.user.user_metadata?.xem_data || '',
+                    stt: 'Đã Duyệt'
+                };
+                sessionStorage.setItem('loggedInUser', JSON.stringify(userToSave));
+                window.location.href = 'index.html';
+            } catch (err) {
+                showMessage(err.message, true);
+            } finally {
+                setButtonLoading('btn-login', false, 'Đăng nhập');
+            }
+        });
+
+        // Tự động viết hoa chữ cái đầu mỗi từ cho Họ và Tên
+        function formatTitleCaseName(str) {
+            if (!str) return '';
+            return str
+                .split(' ')
+                .map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '')
+                .join(' ');
         }
 
-        async function handleRegister(e) {
+        async function checkEmailExists(email) {
+            if (!email || !email.includes('@') || !email.includes('.')) return false;
+            try {
+                const { data } = await sb.from('user').select('gmail').ilike('gmail', email).maybeSingle();
+                return !!data;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        const regHoTenInput = document.getElementById('reg-ho-ten');
+        if (regHoTenInput) {
+            regHoTenInput.addEventListener('input', (e) => {
+                const input = e.target;
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                const val = input.value;
+                const formatted = formatTitleCaseName(val);
+                if (formatted !== val) {
+                    input.value = formatted;
+                    input.setSelectionRange(start, end);
+                }
+            });
+            regHoTenInput.addEventListener('blur', (e) => {
+                e.target.value = formatTitleCaseName(e.target.value.trim());
+            });
+        }
+
+        const regEmailInput = document.getElementById('reg-email');
+        const regEmailError = document.getElementById('reg-email-error');
+
+        if (regEmailInput) {
+            regEmailInput.addEventListener('blur', async (e) => {
+                const email = e.target.value.trim().toLowerCase();
+                if (!email || !email.includes('@') || !email.includes('.')) {
+                    if (regEmailError) regEmailError.classList.add('hidden');
+                    return;
+                }
+                const exists = await checkEmailExists(email);
+                if (exists) {
+                    if (regEmailError) {
+                        regEmailError.textContent = `Email "${email}" đã tồn tại trong hệ thống. Vui lòng đăng nhập hoặc chọn Quên mật khẩu.`;
+                        regEmailError.classList.remove('hidden');
+                    }
+                    showMessage(`Email "${email}" đã tồn tại trong hệ thống. Vui lòng đăng nhập hoặc chọn Quên mật khẩu.`, true);
+                } else {
+                    if (regEmailError) regEmailError.classList.add('hidden');
+                }
+            });
+
+            regEmailInput.addEventListener('input', () => {
+                if (regEmailError) regEmailError.classList.add('hidden');
+            });
+        }
+
+        // 2. ĐĂNG KÝ
+        document.getElementById('form-register').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const gmail = document.getElementById('register-gmail').value.trim();
-            const password = document.getElementById('register-password').value;
-            const confirmPassword = document.getElementById('register-confirm-password').value;
-            const ho_ten = document.getElementById('register-ho-ten').value.trim();
-            const phan_quyen = document.getElementById('register-role').value;
-            if (!gmail || !password || !ho_ten) return showMessage('Vui lòng điền đầy đủ các trường có dấu *.');
-            if (password !== confirmPassword) return showMessage('Mật khẩu không khớp.');
-            if (ho_ten.length < 3) return showMessage('Họ tên phải từ 3 ký tự trở lên.');
-            const selectedNganh = Array.from(document.querySelectorAll('input[name="register-nganh"]:checked')).map(cb => cb.value);
-            let xem_view = '', xem_data = ''; 
-            if (phan_quyen === 'View') { xem_view = 'view-ton-kho'; } 
-            else if (phan_quyen === 'User') { xem_view = 'view-ton-kho,view-chi-tiet'; xem_data = selectedNganh.join(','); }
-            const { error } = await sb.from('user').insert({ gmail, mat_khau: password, ho_ten, phan_quyen, xem_view, xem_data, stt: 'Đã Duyệt' });
-            if (error) {
-                if (error.code === '23505') return showMessage('Tên đăng nhập hoặc Gmail đã tồn tại.');
-                return showMessage('Lỗi đăng ký: ' + error.message);
-            }
-            showMessage('Đăng ký thành công! Đăng nhập ngay.', false);
-            setTimeout(() => {
-                document.getElementById('register-form').reset();
-                document.getElementById('nganh-dropdown').classList.add('hidden');
-                document.querySelectorAll('input[name="register-nganh"]').forEach(cb => cb.checked = false);
-                updateNganhBadge();
-                document.getElementById('show-login-btn').click();
-            }, 1500);
-        }
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
+            const rawHoTen = document.getElementById('reg-ho-ten').value.trim();
+            const ho_ten = formatTitleCaseName(rawHoTen);
+            const phan_quyen = document.getElementById('reg-role').value;
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-confirm-password').value;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('loading-container').classList.add('hidden');
-            document.getElementById('main-layout').classList.remove('hidden');
-            fetchIndustries();
-            if (sessionStorage.getItem('loggedInUser')) { window.location.href = 'index.html'; return; }
-            const remembered = localStorage.getItem('rememberedCredentials');
-            if (remembered) {
-                try {
-                    const credentials = JSON.parse(remembered);
-                    document.getElementById('login-gmail').value = credentials.identifier;
-                    document.getElementById('login-password').value = credentials.password;
-                    document.getElementById('login-remember-me').checked = true;
-                } catch (e) { localStorage.removeItem('rememberedCredentials'); }
+            if (!email.includes('@') || !email.includes('.')) {
+                return showMessage('Vui lòng nhập địa chỉ email hợp lệ.');
+            }
+            if (!ho_ten) {
+                return showMessage('Vui lòng nhập họ và tên (viết hoa đủ dấu).');
+            }
+            if (password.length < 6) {
+                return showMessage('Mật khẩu phải từ 6 ký tự trở lên.');
+            }
+            if (password !== confirmPassword) {
+                return showMessage('Xác nhận mật khẩu không khớp.');
             }
 
-            document.getElementById('login-form').addEventListener('submit', handleLogin);
-            document.getElementById('register-form').addEventListener('submit', handleRegister);
+            setButtonLoading('btn-register', true, 'Đang kiểm tra...');
+            try {
+                // Kiểm tra trùng email trong hệ thống trước khi gửi OTP
+                const exists = await checkEmailExists(email);
+                if (exists) {
+                    if (regEmailError) {
+                        regEmailError.textContent = `Email "${email}" đã tồn tại trong hệ thống.`;
+                        regEmailError.classList.remove('hidden');
+                    }
+                    throw new Error(`Email "${email}" đã tồn tại trong hệ thống. Vui lòng đăng nhập hoặc chọn Quên mật khẩu.`);
+                }
 
-            // Nganh Dropdown
-            const dropdownBtn = document.getElementById('nganh-dropdown-btn');
-            const dropdownMenu = document.getElementById('nganh-dropdown');
-            dropdownBtn.onclick = (e) => { e.stopPropagation(); dropdownMenu.classList.toggle('hidden'); };
-            document.getElementById('nganh-deselect-all-btn').onclick = (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('input[name="register-nganh"]').forEach(checkbox => {
-                    checkbox.checked = false;
-                    const label = checkbox.closest('label');
-                    if (label) {
-                        label.querySelector('svg').classList.add('hidden');
-                        label.querySelector('div').classList.remove('border-blue-200', 'bg-blue-50');
+                setButtonLoading('btn-register', true, 'Đăng ký & Nhận mã OTP');
+
+                const selectedNganh = Array.from(document.querySelectorAll('input[name="reg-nganh"]:checked')).map(cb => cb.value);
+                const xem_view = (phan_quyen === 'View') ? 'view-ton-kho' : 'view-ton-kho,view-chi-tiet';
+                const xem_data = (phan_quyen === 'User') ? selectedNganh.join(',') : '';
+
+                const { data, error } = await sb.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: { ho_ten, phan_quyen, xem_view, xem_data }
                     }
                 });
-                updateNganhBadge();
-            };
-            document.getElementById('nganh-confirm-btn').onclick = () => dropdownMenu.classList.add('hidden');
-            document.getElementById('nganh-search').addEventListener('input', (e) => renderIndustries(e.target.value));
+                if (error) {
+                    if (error.message.includes('User already registered') || error.message.includes('already exists')) {
+                        throw new Error(`Email "${email}" đã tồn tại trong hệ thống. Vui lòng đăng nhập hoặc chọn Quên mật khẩu.`);
+                    }
+                    throw error;
+                }
 
-            document.getElementById('register-role').addEventListener('change', (e) => {
-                const wrapper = document.getElementById('nganh-selection-wrapper');
-                wrapper.classList.toggle('hidden', e.target.value !== 'User');
+                currentPendingEmail = email;
+                currentOtpType = 'signup';
+                document.getElementById('otp-target-email').textContent = email;
+                document.getElementById('otp-input').value = '';
+                switchView('otp');
+                showMessage('Mã OTP 6 số đã được gửi qua email. Vui lòng kiểm tra!', false);
+                startOtpCountdown();
+            } catch (err) {
+                showMessage(err.message, true);
+            } finally {
+                setButtonLoading('btn-register', false, 'Đăng ký & Nhận mã OTP');
+            }
+        });
+
+        // 3. XÁC NHẬN MÃ OTP
+        document.getElementById('form-otp').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = document.getElementById('otp-input').value.trim();
+            if (token.length !== 6) {
+                return showMessage('Vui lòng nhập đủ 6 chữ số OTP.');
+            }
+
+            setButtonLoading('btn-verify-otp', true, 'Xác nhận');
+            try {
+                const { data, error } = await sb.auth.verifyOtp({
+                    email: currentPendingEmail,
+                    token: token,
+                    type: currentOtpType
+                });
+                if (error) {
+                    throw new Error('Mã OTP không đúng hoặc đã hết hạn. Vui lòng kiểm tra lại!');
+                }
+
+                if (currentOtpType === 'signup') {
+                    showMessage('Kích hoạt tài khoản thành công! Đang chuyển hướng...', false);
+                    let { data: profile } = await sb.from('user').select('*').ilike('gmail', currentPendingEmail).maybeSingle();
+                    const userToSave = profile || {
+                        gmail: currentPendingEmail,
+                        ho_ten: data.user?.user_metadata?.ho_ten || currentPendingEmail.split('@')[0],
+                        phan_quyen: data.user?.user_metadata?.phan_quyen || 'View',
+                        xem_view: data.user?.user_metadata?.xem_view || 'view-ton-kho',
+                        xem_data: data.user?.user_metadata?.xem_data || '',
+                        stt: 'Đã Duyệt'
+                    };
+                    sessionStorage.setItem('loggedInUser', JSON.stringify(userToSave));
+                    setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+                } else if (currentOtpType === 'recovery') {
+                    showMessage('Xác thực OTP thành công! Vui lòng nhập mật khẩu mới.', false);
+                    switchView('reset-password');
+                }
+            } catch (err) {
+                showMessage(err.message, true);
+            } finally {
+                setButtonLoading('btn-verify-otp', false, 'Xác nhận');
+            }
+        });
+
+        // 4. QUÊN MẬT KHẨU
+        document.getElementById('form-forgot').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+            if (!email.includes('@') || !email.includes('.')) {
+                return showMessage('Vui lòng nhập địa chỉ email hợp lệ.');
+            }
+
+            setButtonLoading('btn-forgot', true, 'Đang kiểm tra tài khoản...');
+            try {
+                // Kiểm tra xem email có tồn tại trên hệ thống không
+                const { data: userRecord } = await sb.from('user').select('gmail').ilike('gmail', email).maybeSingle();
+                if (!userRecord) {
+                    throw new Error(`Email "${email}" chưa được đăng ký trong hệ thống. Vui lòng kiểm tra lại!`);
+                }
+
+                setButtonLoading('btn-forgot', true, 'Gửi mã OTP qua Email');
+                const { error } = await sb.auth.resetPasswordForEmail(email);
+                if (error) throw error;
+
+                currentPendingEmail = email;
+                currentOtpType = 'recovery';
+                document.getElementById('otp-target-email').textContent = email;
+                document.getElementById('otp-input').value = '';
+                switchView('otp');
+                showMessage('Mã OTP 6 số đã được gửi qua email của bạn.', false);
+                startOtpCountdown();
+            } catch (err) {
+                showMessage(err.message, true);
+            } finally {
+                setButtonLoading('btn-forgot', false, 'Gửi mã OTP qua Email');
+            }
+        });
+
+        // 5. ĐẶT MẬT KHẨU MỚI
+        document.getElementById('form-reset-password').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newPassword = document.getElementById('reset-new-password').value;
+            const confirmPassword = document.getElementById('reset-confirm-password').value;
+
+            if (newPassword.length < 6) {
+                return showMessage('Mật khẩu mới phải từ 6 ký tự trở lên.');
+            }
+            if (newPassword !== confirmPassword) {
+                return showMessage('Mật khẩu xác nhận không khớp.');
+            }
+
+            setButtonLoading('btn-save-password', true, 'Lưu mật khẩu & Đăng nhập');
+            try {
+                const { data, error } = await sb.auth.updateUser({ password: newPassword });
+                if (error) throw error;
+
+                showMessage('Đổi mật khẩu thành công! Đang chuyển hướng...', false);
+                const targetEmail = currentPendingEmail || data?.user?.email;
+                let { data: profile } = await sb.from('user').select('*').ilike('gmail', targetEmail).maybeSingle();
+                if (profile) {
+                    sessionStorage.setItem('loggedInUser', JSON.stringify(profile));
+                } else if (data?.user) {
+                    const fallbackUser = {
+                        gmail: data.user.email,
+                        ho_ten: data.user.user_metadata?.ho_ten || data.user.email.split('@')[0],
+                        phan_quyen: data.user.user_metadata?.phan_quyen || 'Admin',
+                        xem_view: data.user.user_metadata?.xem_view || 'view-phat-trien,view-san-pham,view-ton-kho,view-chi-tiet,view-cai-dat',
+                        xem_data: data.user.user_metadata?.xem_data || '',
+                        stt: 'Đã Duyệt'
+                    };
+                    sessionStorage.setItem('loggedInUser', JSON.stringify(fallbackUser));
+                }
+                setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+            } catch (err) {
+                showMessage(err.message, true);
+            } finally {
+                setButtonLoading('btn-save-password', false, 'Lưu mật khẩu & Đăng nhập');
+            }
+        });
+
+        // ================= KHỞI TẠO BAN ĐẦU =================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Kiểm tra session hiện có
+            const { data: { session } } = await sb.auth.getSession();
+            if (session && sessionStorage.getItem('loggedInUser')) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Ghi nhớ email
+            const remEmail = localStorage.getItem('rememberedEmail');
+            if (remEmail) {
+                document.getElementById('login-email').value = remEmail;
+                document.getElementById('login-remember').checked = true;
+            }
+
+            fetchIndustries();
+
+            // Toggle ngành phụ trách khi đổi vai trò
+            document.getElementById('reg-role').addEventListener('change', (e) => {
+                document.getElementById('reg-nganh-wrapper').classList.toggle('hidden', e.target.value !== 'User');
             });
 
-            document.getElementById('show-register-btn').onclick = () => {
-                document.getElementById('login-form').classList.add('hidden');
-                document.getElementById('register-form').classList.remove('hidden');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+            // Dropdown ngành
+            const nganhBtn = document.getElementById('reg-nganh-btn');
+            const nganhDropdown = document.getElementById('reg-nganh-dropdown');
+            nganhBtn.onclick = (e) => { e.stopPropagation(); nganhDropdown.classList.toggle('hidden'); };
+            document.getElementById('reg-nganh-done').onclick = () => nganhDropdown.classList.add('hidden');
+            document.getElementById('reg-nganh-clear').onclick = () => {
+                document.querySelectorAll('input[name="reg-nganh"]').forEach(cb => cb.checked = false);
+                updateNganhText();
             };
-            document.getElementById('show-login-btn').onclick = () => {
-                document.getElementById('register-form').classList.add('hidden');
-                document.getElementById('login-form').classList.remove('hidden');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-            
-            document.querySelectorAll('.password-toggle-btn').forEach(btn => {
-                btn.onclick = () => {
-                    const input = document.getElementById(btn.dataset.togglePassword);
-                    const isTypePassword = input.type === 'password';
-                    input.type = isTypePassword ? 'text' : 'password';
-                    btn.querySelector('.toggle-icon-show').classList.toggle('hidden', isTypePassword);
-                    btn.querySelector('.toggle-icon-hide').classList.toggle('hidden', !isTypePassword);
-                };
-            });
-
-            // Contact Modal Logic
-            const contactModal = document.getElementById('contact-modal');
-            const contactMenu = contactModal.querySelector('.contact-menu');
-            const openContactBtn = document.getElementById('open-contact-btn');
-            const closeContactBtn = document.getElementById('close-contact-btn');
-            const overlay = contactModal.querySelector('.contact-modal-overlay');
-
-            const openContact = () => {
-                contactModal.classList.remove('hidden');
-                setTimeout(() => contactMenu.classList.add('active'), 10);
-            };
-            const closeContact = () => {
-                contactMenu.classList.remove('active');
-                setTimeout(() => contactModal.classList.add('hidden'), 300);
-            };
-
-            openContactBtn.onclick = openContact;
-            closeContactBtn.onclick = closeContact;
-            overlay.onclick = closeContact;
+            document.getElementById('reg-nganh-search').addEventListener('input', (e) => renderIndustries(e.target.value));
 
             document.addEventListener('click', (e) => {
-                if (!e.target.closest('#nganh-selection-wrapper')) dropdownMenu.classList.add('hidden');
+                if (!e.target.closest('#reg-nganh-wrapper')) nganhDropdown.classList.add('hidden');
             });
         });
+
+        function openContactModal() { document.getElementById('contact-modal').classList.remove('hidden'); }
+        function closeContactModal() { document.getElementById('contact-modal').classList.add('hidden'); }
     </script>
 </body>
 </html>
