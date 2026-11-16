@@ -304,37 +304,36 @@ const VIEW_HTML = `
                     </button>
 
                     <button type="button" id="hang-no-reset-filters"
-                        class="btn-toolbar-secondary btn-clear-filter"
+                        class="btn-toolbar-secondary btn-clear-filter inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
                         title="Xóa toàn bộ bộ lọc & tìm kiếm">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z">
                             </path>
                             <line x1="18" y1="6" x2="6" y2="18" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"></line>
                         </svg>
-                        <span>Xóa Lọc</span>
+                        <span class="whitespace-nowrap">Xóa Lọc</span>
                     </button>
 
                     <button type="button" id="hang-no-col-settings-btn"
-                        class="btn-toolbar-outline"
+                        class="btn-toolbar-outline inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
                         title="Tùy chỉnh ẩn/hiển các cột">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"></path>
                         </svg>
-                        <span>Cài Đặt Cột</span>
+                        <span class="whitespace-nowrap">Cài Đặt Cột</span>
                     </button>
 
                     <button type="button" id="hang-no-btn-excel"
-                        class="btn-toolbar-excel btn-excel-export"
+                        class="btn-toolbar-excel btn-excel-export inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
                         title="Xuất file Excel (.xlsx)">
-                        <svg class="excel-btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <svg class="excel-btn-icon w-3.5 h-3.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-5.5-7.5l2.4 3.6h-1.6l-1.7-2.7-1.7 2.7H8.8l2.4-3.6-2.3-3.4h1.6l1.6 2.5 1.6-2.5h1.6l-2.3 3.4z" />
                         </svg>
-                        <span>Xuất Excel</span>
+                        <span class="whitespace-nowrap">Xuất Excel</span>
                     </button>
                 </div>
             </div>
-        </div>
         </div>
 
         <!-- Table Container (Hỗ trợ trượt ngang và kéo dãn cột) -->
@@ -1747,11 +1746,9 @@ async function fetchAndRenderTimeline(item) {
 
                         ${entry.nguoi_thuc_hien ? `<div class="text-[11px] text-gray-400 mt-0.5">Người cập nhật: <span class="font-medium text-gray-700">${entry.nguoi_thuc_hien}</span></div>` : ''}
 
-                        ${(entry.seri || entry.bms || entry.region) ? `
+                        ${entry.seri ? `
                             <div class="flex flex-wrap items-center gap-2 text-[11px] text-gray-600 mt-1.5 bg-gray-50 px-2 py-1 rounded border border-gray-200">
-                                ${entry.seri ? `<span>Số Seri: <b class="font-mono text-gray-800">${entry.seri}</b></span>` : ''}
-                                ${entry.bms ? `<span>BMs: <b class="text-gray-800">${entry.bms}</b></span>` : ''}
-                                ${entry.region ? `<span>Region: <b class="text-gray-800">${entry.region}</b></span>` : ''}
+                                <span>Số Seri: <b class="font-mono text-gray-800">${entry.seri}</b></span>
                             </div>
                         ` : ''}
 
@@ -1920,7 +1917,9 @@ async function saveTimelineEntry() {
         bms !== (currentTimelineTarget.bms || '') ||
         region !== (currentTimelineTarget.region || '');
 
-    if (!note && selectedNewPhotos.length === 0 && !hasInfoUpdate) {
+    const hasTimelineMilestone = note.length > 0 || selectedNewPhotos.length > 0;
+
+    if (!hasTimelineMilestone && !hasInfoUpdate) {
         showToast('Vui lòng nhập ghi chú, chụp/chọn ảnh hoặc cập nhật Seri/BMs/Region.', 'warning');
         return;
     }
@@ -1957,35 +1956,38 @@ async function saveTimelineEntry() {
 
         const performer = currentUser?.ho_ten || currentUser?.gmail || 'Nhân viên';
 
-        const insertPayload = {
-            chi_tiet_id: currentTimelineTarget.id || null,
-            ma_nx: currentTimelineTarget.ma_nx,
-            ma_vt: currentTimelineTarget.ma_vt,
-            lot: currentTimelineTarget.lot || '',
-            seri: seri,
-            bms: bms,
-            region: region,
-            loai_moc: loaiMoc,
-            thoi_gian: new Date().toISOString(),
-            nguoi_thuc_hien: performer,
-            hinh_anh: uploadedUrls,
-            ghi_chu: note
-        };
+        // CHỈ ghi vào nhật ký hang_no_timeline nếu có ghi chú hoặc có ảnh chụp/tải lên
+        if (hasTimelineMilestone) {
+            const insertPayload = {
+                chi_tiet_id: currentTimelineTarget.id || null,
+                ma_nx: currentTimelineTarget.ma_nx,
+                ma_vt: currentTimelineTarget.ma_vt,
+                lot: currentTimelineTarget.lot || '',
+                seri: seri,
+                loai_moc: loaiMoc,
+                thoi_gian: new Date().toISOString(),
+                nguoi_thuc_hien: performer,
+                hinh_anh: uploadedUrls,
+                ghi_chu: note
+            };
 
-        const { error: insertError } = await sb.from('hang_no_timeline').insert([insertPayload]);
-        if (insertError) throw insertError;
+            const { error: insertError } = await sb.from('hang_no_timeline').insert([insertPayload]);
+            if (insertError) throw insertError;
+        }
 
-        // Lưu đồng bộ vào bảng hang_no_info để gán cố định cho dòng hàng nợ
-        const { error: infoError } = await sb.from('hang_no_info').upsert({
-            ma_nx: currentTimelineTarget.ma_nx,
-            ma_vt: currentTimelineTarget.ma_vt,
-            lot: currentTimelineTarget.lot || '',
-            seri: seri,
-            bms: bms,
-            region: region,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'ma_nx,ma_vt,lot' });
-        if (infoError) console.warn('Lỗi upsert hang_no_info:', infoError);
+        // Lưu thông tin Seri, BMs, Region vào bảng hang_no_info
+        if (hasInfoUpdate || seri || bms || region) {
+            const { error: infoError } = await sb.from('hang_no_info').upsert({
+                ma_nx: currentTimelineTarget.ma_nx,
+                ma_vt: currentTimelineTarget.ma_vt,
+                lot: currentTimelineTarget.lot || '',
+                seri: seri,
+                bms: bms,
+                region: region,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'ma_nx,ma_vt,lot' });
+            if (infoError) console.warn('Lỗi upsert hang_no_info:', infoError);
+        }
 
         // Cập nhật lại đối tượng item trong bộ nhớ
         currentTimelineTarget.seri = seri;
@@ -2007,7 +2009,13 @@ async function saveTimelineEntry() {
             distinctRegionList.sort((a, b) => a.localeCompare(b, 'vi'));
         }
 
-        showToast('Đã lưu thông tin và mốc thời gian thành công!', 'success');
+        if (hasTimelineMilestone && hasInfoUpdate) {
+            showToast('Đã lưu thông tin và mốc thời gian thành công!', 'success');
+        } else if (hasTimelineMilestone) {
+            showToast('Đã thêm mốc thời gian thành công!', 'success');
+        } else {
+            showToast('Đã cập nhật thông tin thành công!', 'success');
+        }
 
     document.getElementById('hn-tl-note').value = '';
     selectedNewPhotos = [];
@@ -2538,17 +2546,15 @@ async function saveBatchDo() {
             }, { onConflict: 'ma_nx,ma_vt,lot' });
             if (infoErr) console.warn('Lỗi upsert hang_no_info:', infoErr);
 
-            // 3. Phân bổ lưu vào nhật ký hang_no_timeline cho sản phẩm này
-            const hasUpdate = note || uploadedUrls.length > 0 || bms || region || itemSeri;
-            if (hasUpdate) {
+            // 3. Phân bổ lưu vào nhật ký hang_no_timeline (CHỈ tạo mốc khi có ghi chú hoặc có ảnh đính kèm)
+            const hasTimelineMilestone = note.length > 0 || uploadedUrls.length > 0;
+            if (hasTimelineMilestone) {
                 const insertPayload = {
                     chi_tiet_id: item.id || null,
                     ma_nx: item.ma_nx,
                     ma_vt: item.ma_vt,
                     lot: item.lot || '',
                     seri: itemSeri,
-                    bms: bms,
-                    region: region,
                     loai_moc: loaiMoc,
                     thoi_gian: nowIso,
                     nguoi_thuc_hien: performer,

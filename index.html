@@ -1059,6 +1059,55 @@
             }
         }
 
+        /* Global & Mobile Toolbar Buttons */
+        .btn-toolbar-secondary,
+        .btn-toolbar-excel,
+        .btn-toolbar-outline,
+        .btn-toolbar-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .btn-toolbar-outline {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: rgba(99, 102, 241, 0.25);
+            color: #4f46e5;
+        }
+
+        .btn-toolbar-secondary {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-toolbar-excel {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #059669;
+        }
+
+        .excel-btn-icon {
+            width: 14px !important;
+            height: 14px !important;
+            min-width: 14px !important;
+            min-height: 14px !important;
+            max-width: 14px !important;
+            max-height: 14px !important;
+            flex-shrink: 0 !important;
+        }
+
         /* Column Filter Popover */
         .tk-col-filter-popover {
             position: fixed;
