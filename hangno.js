@@ -304,7 +304,7 @@ const VIEW_HTML = `
                     </button>
 
                     <button type="button" id="hang-no-reset-filters"
-                        class="btn-toolbar-secondary btn-clear-filter inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
+                        class="btn-toolbar-secondary btn-clear-filter inline-flex items-center justify-center gap-1.5 px-2 md:px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
                         title="Xóa toàn bộ bộ lọc & tìm kiếm">
                         <svg class="w-3.5 h-3.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -312,25 +312,25 @@ const VIEW_HTML = `
                             </path>
                             <line x1="18" y1="6" x2="6" y2="18" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"></line>
                         </svg>
-                        <span class="whitespace-nowrap">Xóa Lọc</span>
+                        <span class="hidden md:inline whitespace-nowrap">Xóa Lọc</span>
                     </button>
 
                     <button type="button" id="hang-no-col-settings-btn"
-                        class="btn-toolbar-outline inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
+                        class="btn-toolbar-outline inline-flex items-center justify-center gap-1.5 px-2 md:px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
                         title="Tùy chỉnh ẩn/hiển các cột">
                         <svg class="w-3.5 h-3.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"></path>
                         </svg>
-                        <span class="whitespace-nowrap">Cài Đặt Cột</span>
+                        <span class="hidden md:inline whitespace-nowrap">Cài Đặt Cột</span>
                     </button>
 
                     <button type="button" id="hang-no-btn-excel"
-                        class="btn-toolbar-excel btn-excel-export inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
+                        class="btn-toolbar-excel btn-excel-export inline-flex items-center justify-center gap-1.5 px-2 md:px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex-shrink-0"
                         title="Xuất file Excel (.xlsx)">
                         <svg class="excel-btn-icon w-3.5 h-3.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-5.5-7.5l2.4 3.6h-1.6l-1.7-2.7-1.7 2.7H8.8l2.4-3.6-2.3-3.4h1.6l1.6 2.5 1.6-2.5h1.6l-2.3 3.4z" />
                         </svg>
-                        <span class="whitespace-nowrap">Xuất Excel</span>
+                        <span class="hidden md:inline whitespace-nowrap">Xuất Excel</span>
                     </button>
                 </div>
             </div>
@@ -529,102 +529,208 @@ const TIMELINE_AND_SETTINGS_MODAL_HTML = `
         <div id="hn-lightbox-caption" class="text-white/80 text-xs text-center mt-2 px-4 max-w-lg"></div>
     </div>
 
-    <!-- Modal Cập nhật chung theo Đơn DO (Cập nhật BMs, Region ở trên, phân bổ Seri & Ảnh từng SP ở dưới) -->
+    <!-- Modal Cập nhật & Xác nhận bàn giao theo Đơn DO (2 Tab: Cập nhật DO & Xác nhận PDF) -->
     <div id="hang-no-batch-modal" class="hidden fixed inset-0 z-[125] flex items-end md:items-center justify-center modal-backdrop bg-black/60 p-0 md:p-4 select-none">
-        <div class="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-2xl max-h-[94vh] md:max-h-[90vh] flex flex-col overflow-hidden">
-            <!-- Header -->
-            <div class="p-3 md:p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3 flex-shrink-0">
-                <div>
-                    <h3 class="text-xs md:text-sm font-bold text-gray-800 uppercase tracking-wide">Cập nhật chung theo đơn DO</h3>
-                    <p class="text-[11px] md:text-xs text-gray-500 mt-0.5">Cập nhật BMs, Region, mốc thời gian và phân bổ số Seri, hình ảnh cho từng sản phẩm</p>
+        <div class="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-4xl max-h-[96vh] md:max-h-[92vh] flex flex-col overflow-hidden">
+            <!-- Header with 2 Tabs -->
+            <div class="p-2.5 md:p-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-2 flex-shrink-0">
+                <div class="flex items-center gap-1.5 md:gap-2">
+                    <button type="button" id="hn-batch-tab-update"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all bg-blue-600 text-white border-blue-600 shadow-2xs flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        <span>1. Cập nhật chung DO</span>
+                    </button>
+                    <button type="button" id="hn-batch-tab-confirm"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold border transition-all bg-white text-gray-700 border-gray-300 hover:bg-gray-100 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>2. Xác nhận</span>
+                    </button>
                 </div>
                 <button type="button" id="hn-batch-modal-close" class="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
 
-            <!-- Scrollable Content -->
-            <div class="flex-1 overflow-y-auto p-3 md:p-4 space-y-4 no-scrollbar">
-                <!-- PHẦN CHUNG Ở TRÊN -->
-                <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 md:p-4 space-y-3">
-                    <!-- Badge thông tin đơn DO -->
-                    <div id="hn-batch-do-summary" class="p-2.5 bg-blue-50/70 border border-blue-200 rounded-lg text-xs text-blue-900 flex flex-wrap items-center justify-between gap-2"></div>
+            <!-- PHẦN 1: CẬP NHẬT CHUNG DO -->
+            <div id="hn-batch-panel-update" class="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <!-- Scrollable Content -->
+                <div class="flex-1 overflow-y-auto p-3 md:p-4 space-y-4 no-scrollbar">
+                    <!-- PHẦN CHUNG Ở TRÊN -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 md:p-4 space-y-3">
+                        <!-- Badge thông tin đơn DO -->
+                        <div id="hn-batch-do-summary" class="p-2.5 bg-blue-50/70 border border-blue-200 rounded-lg text-xs text-blue-900 flex flex-wrap items-center justify-between gap-2"></div>
 
-                    <!-- BMs & Region (Nằm chung 1 hàng trên cả điện thoại và máy tính) -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <!-- BMs Combobox -->
-                        <div class="relative">
-                            <label class="block text-[11px] font-semibold text-gray-700 mb-0.5">BMs</label>
+                        <!-- BMs & Region (Nằm chung 1 hàng trên cả điện thoại và máy tính) -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <!-- BMs Combobox -->
                             <div class="relative">
-                                <input type="text" id="hn-batch-bms" placeholder="Nhập / chọn BMs..." autocomplete="off"
-                                    class="w-full text-xs p-2 pr-7 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400">
-                                <button type="button" id="hn-batch-bms-toggle" tabindex="-1" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded">
-                                    <svg class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </button>
+                                <label class="block text-[11px] font-semibold text-gray-700 mb-0.5">BMs</label>
+                                <div class="relative">
+                                    <input type="text" id="hn-batch-bms" placeholder="Nhập / chọn BMs..." autocomplete="off"
+                                        class="w-full text-xs p-2 pr-7 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400">
+                                    <button type="button" id="hn-batch-bms-toggle" tabindex="-1" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded">
+                                        <svg class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                </div>
+                                <div id="hn-batch-bms-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto no-scrollbar divide-y divide-gray-100"></div>
                             </div>
-                            <div id="hn-batch-bms-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto no-scrollbar divide-y divide-gray-100"></div>
+
+                            <!-- Region Combobox -->
+                            <div class="relative">
+                                <label class="block text-[11px] font-semibold text-gray-700 mb-0.5">Region</label>
+                                <div class="relative">
+                                    <input type="text" id="hn-batch-region" placeholder="Nhập / chọn Region..." autocomplete="off"
+                                        class="w-full text-xs p-2 pr-7 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400">
+                                    <button type="button" id="hn-batch-region-toggle" tabindex="-1" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded">
+                                        <svg class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                </div>
+                                <div id="hn-batch-region-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto no-scrollbar divide-y divide-gray-100"></div>
+                            </div>
                         </div>
 
-                        <!-- Region Combobox -->
-                        <div class="relative">
-                            <label class="block text-[11px] font-semibold text-gray-700 mb-0.5">Region</label>
-                            <div class="relative">
-                                <input type="text" id="hn-batch-region" placeholder="Nhập / chọn Region..." autocomplete="off"
-                                    class="w-full text-xs p-2 pr-7 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400">
-                                <button type="button" id="hn-batch-region-toggle" tabindex="-1" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded">
-                                    <svg class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                </button>
+                        <!-- 2 mốc: Gia hạn & Báo trả -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-700 mb-1">Mốc thời gian</label>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <label class="flex items-center justify-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-blue-400 font-semibold text-gray-700 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 transition-all">
+                                    <input type="radio" name="hn-batch-moc-type" value="gia_han" checked class="text-blue-600 focus:ring-0">
+                                    <span>Gia hạn mượn</span>
+                                </label>
+                                <label class="flex items-center justify-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-blue-400 font-semibold text-gray-700 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 transition-all">
+                                    <input type="radio" name="hn-batch-moc-type" value="tra_hang" class="text-blue-600 focus:ring-0">
+                                    <span>Báo trả hàng</span>
+                                </label>
                             </div>
-                            <div id="hn-batch-region-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto no-scrollbar divide-y divide-gray-100"></div>
+                        </div>
+
+                        <!-- Ghi chú -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-700 mb-0.5">Ghi chú</label>
+                            <textarea id="hn-batch-note" rows="2" placeholder="Ghi chú (lý do gia hạn, ngày dự kiến trả...)"
+                                class="w-full text-xs p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400"></textarea>
                         </div>
                     </div>
 
-                    <!-- 2 mốc: Gia hạn & Báo trả -->
+                    <!-- PHẦN DANH SÁCH SẢN PHẨM Ở DƯỚI (PHÂN BỔ SERI & ẢNH RIÊNG) -->
                     <div>
-                        <label class="block text-[11px] font-semibold text-gray-700 mb-1">Mốc thời gian</label>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <label class="flex items-center justify-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-blue-400 font-semibold text-gray-700 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 transition-all">
-                                <input type="radio" name="hn-batch-moc-type" value="gia_han" checked class="text-blue-600 focus:ring-0">
-                                <span>Gia hạn mượn</span>
-                            </label>
-                            <label class="flex items-center justify-center gap-2 p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-blue-400 font-semibold text-gray-700 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 transition-all">
-                                <input type="radio" name="hn-batch-moc-type" value="tra_hang" class="text-blue-600 focus:ring-0">
-                                <span>Báo trả hàng</span>
-                            </label>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-gray-800 uppercase tracking-wider">Danh sách sản phẩm thuộc đơn DO</span>
+                            <span id="hn-batch-item-count" class="text-xs text-gray-500 font-medium">0 sản phẩm</span>
                         </div>
-                    </div>
 
-                    <!-- Ghi chú -->
-                    <div>
-                        <label class="block text-[11px] font-semibold text-gray-700 mb-0.5">Ghi chú</label>
-                        <textarea id="hn-batch-note" rows="2" placeholder="Ghi chú (lý do gia hạn, ngày dự kiến trả...)"
-                            class="w-full text-xs p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400"></textarea>
+                        <div id="hn-batch-products-list" class="space-y-3">
+                            <div class="p-6 text-center text-xs text-gray-400 italic bg-gray-50 border border-dashed border-gray-300 rounded-xl">
+                                Đang tải sản phẩm...
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- PHẦN DANH SÁCH SẢN PHẨM Ở DƯỚI (PHÂN BỔ SERI & ẢNH RIÊNG) -->
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold text-gray-800 uppercase tracking-wider">Danh sách sản phẩm thuộc đơn DO</span>
-                        <span id="hn-batch-item-count" class="text-xs text-gray-500 font-medium">0 sản phẩm</span>
-                    </div>
-
-                    <div id="hn-batch-products-list" class="space-y-3">
-                        <div class="p-6 text-center text-xs text-gray-400 italic bg-gray-50 border border-dashed border-gray-300 rounded-xl">
-                            Đang tải sản phẩm...
-                        </div>
-                    </div>
+                <!-- Footer Tab 1 -->
+                <div class="p-3 md:p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-2 flex-shrink-0">
+                    <button type="button" id="hn-batch-modal-cancel" class="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-medium transition-colors">
+                        Đóng
+                    </button>
+                    <button type="button" id="hn-batch-save-btn" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span>Lưu tất cả sản phẩm của DO</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Footer -->
-            <div class="p-3 md:p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-2 flex-shrink-0">
-                <button type="button" id="hn-batch-modal-cancel" class="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg text-xs font-medium transition-colors">
-                    Đóng
-                </button>
-                <button type="button" id="hn-batch-save-btn" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span>Lưu tất cả sản phẩm của DO</span>
-                </button>
+            <!-- PHẦN 2: XÁC NHẬN BÀN GIAO (BIỂU MẪU GEN11 TRACKING) -->
+            <div id="hn-batch-panel-confirm" class="hidden flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-100">
+                <!-- Toolbar cấu hình form xác nhận -->
+                <div class="p-3 md:p-3.5 bg-white border-b border-gray-200 flex-shrink-0 space-y-2.5">
+                    <!-- Chọn sản phẩm đưa vào biểu mẫu -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Chọn sản phẩm đưa vào biểu mẫu:</span>
+                            <button type="button" id="hn-confirm-toggle-all-products" class="text-xs text-blue-600 hover:underline font-semibold">Chọn tất cả</button>
+                        </div>
+                        <div id="hn-confirm-products-checklist" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-1.5 bg-gray-50 rounded-lg border border-gray-200">
+                            <!-- Sẽ render các checkbox sản phẩm -->
+                        </div>
+                    </div>
+
+                    <!-- Thêm người ký PSRs & BM -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2 border-t border-gray-100">
+                        <!-- PSRs (Ngành EES) -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-700 mb-1">Thêm người ký (PSRs - Ngành EES):</label>
+                            <div class="flex items-center gap-1.5">
+                                <div class="relative flex-1">
+                                    <input type="text" id="hn-confirm-psr-input" placeholder="Chọn hoặc nhập tên nhân viên EES..." autocomplete="off"
+                                        class="w-full text-xs p-2 pr-7 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400">
+                                    <button type="button" id="hn-confirm-psr-toggle" tabindex="-1" class="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded">
+                                        <svg class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                    <div id="hn-confirm-psr-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto no-scrollbar divide-y divide-gray-100"></div>
+                                </div>
+                                <button type="button" id="hn-confirm-add-psr-btn" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs active:scale-95 flex-shrink-0">
+                                    + Thêm
+                                </button>
+                            </div>
+                            <div id="hn-confirm-psr-tags" class="flex flex-wrap gap-1.5 mt-1.5 min-h-[24px]"></div>
+                        </div>
+
+                        <!-- Người ký BM & 2 Nút In / Xuất PDF -->
+                        <div class="flex flex-col justify-between">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-gray-700 mb-1">Người ký BM:</label>
+                                <input type="text" id="hn-confirm-bm-input" placeholder="Nhập tên BM ký duyệt..."
+                                    class="w-full text-xs p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400">
+                            </div>
+                            <div class="flex items-center justify-end gap-2 mt-2">
+                                <button type="button" id="hn-confirm-print-btn" class="px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-lg text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 active:scale-95">
+                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                    <span>In biểu mẫu</span>
+                                </button>
+                                <button type="button" id="hn-confirm-export-pdf" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 active:scale-95">
+                                    <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-5.5-7.5l2.4 3.6h-1.6l-1.7-2.7-1.7 2.7H8.8l2.4-3.6-2.3-3.4h1.6l1.6 2.5 1.6-2.5h1.6l-2.3 3.4z"/>
+                                    </svg>
+                                    <span>Xuất PDF</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Vùng in / xuất PDF Biểu mẫu chuẩn -->
+                <div class="flex-1 overflow-y-auto p-3 md:p-6 no-scrollbar flex justify-center">
+                    <div id="hn-confirm-document-root" class="w-full max-w-[760px] bg-white p-6 md:p-8 rounded shadow-sm border border-gray-200 text-slate-800" style="font-family: Arial, Helvetica, sans-serif; box-sizing: border-box;">
+                        <!-- Banner tiêu đề -->
+                        <div style="background-color: #0e2e47; color: #ffffff; padding: 12px 16px; text-align: center; font-size: 18px; font-weight: 700; letter-spacing: 0.5px; border-radius: 2px 2px 0 0;">
+                            GEN11 | Demo Unit Tracking
+                        </div>
+
+                        <!-- Bảng dữ liệu: Serial Number | BMs | PSRs | Regions -->
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 0; border: 1px solid #14555f;">
+                            <thead>
+                                <tr style="background-color: #1d7380; color: #ffffff; text-align: center; font-weight: 700; font-size: 13px;">
+                                    <th style="padding: 10px 8px; border: 1px solid #14555f; width: 30%;">Serial Number</th>
+                                    <th style="padding: 10px 8px; border: 1px solid #14555f; width: 22%;">BMs</th>
+                                    <th style="padding: 10px 8px; border: 1px solid #14555f; width: 26%;">PSRs</th>
+                                    <th style="padding: 10px 8px; border: 1px solid #14555f; width: 22%;">Regions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hn-confirm-table-body">
+                                <!-- Dữ liệu hàng sẽ render động -->
+                            </tbody>
+                        </table>
+
+                        <!-- Banner chữ ký: SIGNATURE APPROVALS -->
+                        <div style="background-color: #0e2e47; color: #ffffff; padding: 8px 16px; text-align: center; font-size: 13px; font-weight: 700; margin-top: 36px; letter-spacing: 0.5px;">
+                            SIGNATURE APPROVALS
+                        </div>
+
+                        <!-- Khung chữ ký (Grid 2 cột theo đúng mẫu) -->
+                        <div id="hn-confirm-signatures-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px;">
+                            <!-- Sẽ render động các ô PSR & BM -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -761,10 +867,12 @@ async function loadTimelineStats() {
         timelineStatsMap.clear();
         (data || []).forEach(row => {
             const key = `${row.ma_nx}_${row.ma_vt}_${row.lot || ''}`.toUpperCase();
-            const curr = timelineStatsMap.get(key) || { count: 0, photoCount: 0, hasGiaHan: false };
+            const curr = timelineStatsMap.get(key) || { count: 0, photoCount: 0, hasGiaHan: false, hasTraHang: false };
             curr.count += 1;
             if (row.loai_moc === 'gia_han') {
                 curr.hasGiaHan = true;
+            } else if (row.loai_moc === 'tra_hang') {
+                curr.hasTraHang = true;
             }
             const imgs = Array.isArray(row.hinh_anh) ? row.hinh_anh : [];
             curr.photoCount += imgs.length;
@@ -837,8 +945,9 @@ export async function fetchHangNo(page = 1, isBackground = false) {
 
         const timelineStatsPromise = loadTimelineStats();
         const infoPromise = sb.from('hang_no_info').select('ma_nx, ma_vt, lot, seri, bms, region');
+        const eesStaffPromise = fetchEesStaffList();
 
-        const [expRes, impRes, , infoRes] = await Promise.all([expPromise, impPromise, timelineStatsPromise, infoPromise]);
+        const [expRes, impRes, , infoRes] = await Promise.all([expPromise, impPromise, timelineStatsPromise, infoPromise, eesStaffPromise]);
 
         if (expRes.error) throw expRes.error;
         if (impRes.error) throw impRes.error;
@@ -1206,9 +1315,9 @@ function renderTableRows(items, startIndex) {
                             ${group.muc_dich ? `<span class="px-2 py-0.5 rounded text-[11px] bg-white text-gray-700 border border-gray-200 max-w-sm truncate" title="${group.muc_dich}">Mục đích: <b class="text-gray-900 font-medium">${group.muc_dich}</b></span>` : ''}
                             <span class="text-gray-500 font-normal">(${group.items.length} mặt hàng • Còn nợ: <b class="text-red-600">${totalGroupDebt.toLocaleString('vi-VN')}</b>)</span>
                         </div>
-                        <button type="button" class="hn-quick-batch-btn inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 border border-blue-300 rounded text-xs font-semibold shadow-2xs transition-all active:scale-95" data-ma-nx="${group.ma_nx}" title="Cập nhật chung BMs, Region, mốc và ảnh cho đơn DO này">
+                        <button type="button" class="hn-quick-batch-btn inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 border border-blue-300 rounded text-xs font-semibold shadow-2xs transition-all active:scale-95" data-ma-nx="${group.ma_nx}" title="Cập nhật hoặc xuất biểu mẫu xác nhận cho đơn DO này">
                             <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            <span>Cập nhật chung DO</span>
+                            <span>Cập nhật</span>
                         </button>
                     </div>
                 </td>
@@ -1277,14 +1386,27 @@ function renderTableRows(items, startIndex) {
                         return `<td class="px-2.5 py-2 text-right font-bold text-red-600 border-r border-gray-200 text-sm" style="${style}">${item.sl_con_no.toLocaleString('vi-VN')}</td>`;
                     case 'nhat_ky': {
                         let btnText = '+ Nhật ký';
-                        let btnClass = 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200';
+                        // Chưa tác động gì thì tô đỏ nhạt
+                        let btnClass = 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 font-medium';
+                        let cellBg = 'bg-red-50/20';
+
                         if (stat && stat.count > 0) {
                             btnText = `Nhật ký (${stat.count})${stat.photoCount > 0 ? ` [${stat.photoCount} ảnh]` : ''}`;
-                            btnClass = 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-semibold';
+                            if (stat.hasGiaHan) {
+                                // Gia hạn thì tô vàng nhạt
+                                btnClass = 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300 font-semibold';
+                                cellBg = 'bg-amber-50/30';
+                            } else if (stat.hasTraHang) {
+                                btnClass = 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 font-semibold';
+                                cellBg = 'bg-emerald-50/20';
+                            } else {
+                                btnClass = 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300 font-semibold';
+                                cellBg = 'bg-amber-50/30';
+                            }
                         }
                         return `
-                            <td class="px-2.5 py-2 text-center whitespace-nowrap" style="${style}">
-                                <button type="button" class="hn-open-timeline-btn inline-flex items-center justify-center px-2 py-1 rounded text-xs transition-colors active:scale-95 ${btnClass}"
+                            <td class="px-2.5 py-2 text-center whitespace-nowrap ${cellBg}" style="${style}">
+                                <button type="button" class="hn-open-timeline-btn inline-flex items-center justify-center px-2 py-1 rounded text-xs transition-colors active:scale-95 shadow-2xs ${btnClass}"
                                     data-ma-nx="${item.ma_nx}" data-ma-vt="${item.ma_vt}" data-lot="${item.lot || ''}" data-id="${item.id}">
                                     ${btnText}
                                 </button>
@@ -2086,7 +2208,7 @@ function updateDistinctBmsAndRegion(infoData = []) {
  * Custom Combobox in-app (dropdown tự chế trong ứng dụng, mượt mà trên mobile & web,
  * cho phép nhập mới hoặc chọn từ danh sách có sẵn, không mở native wheel picker của trình duyệt).
  */
-function setupCustomCombobox({ inputId, toggleBtnId, dropdownId, getOptions }) {
+function setupCustomCombobox({ inputId, toggleBtnId, dropdownId, getOptions, onSelect }) {
     const input = document.getElementById(inputId);
     const toggleBtn = document.getElementById(toggleBtnId);
     const dropdown = document.getElementById(dropdownId);
@@ -2141,10 +2263,14 @@ function setupCustomCombobox({ inputId, toggleBtnId, dropdownId, getOptions }) {
             el.addEventListener('pointerdown', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                input.value = el.dataset.val;
+                const selectedVal = el.dataset.val;
+                input.value = selectedVal;
                 closeDropdown();
                 input.dispatchEvent(new Event('change', { bubbles: true }));
                 input.dispatchEvent(new Event('input', { bubbles: true }));
+                if (typeof onSelect === 'function') {
+                    onSelect(selectedVal);
+                }
             });
         });
     }
@@ -2215,13 +2341,110 @@ function setupCustomCombobox({ inputId, toggleBtnId, dropdownId, getOptions }) {
 
 /**
  * ========================================================
- * XỬ LÝ CẬP NHẬT CHUNG THEO ĐƠN DO (BATCH DO UPDATE)
+ * XỬ LÝ CẬP NHẬT CHUNG THEO ĐƠN DO & BIỂU MẪU XÁC NHẬN
  * ========================================================
  */
 let currentBatchDo = '';
 let batchPhotosMap = new Map(); // key: itemKey -> array of { file, previewUrl, sizeKb }
+let eesStaffList = [];          // Danh sách nhân viên ngành EES
+let confirmPsrList = [];        // Danh sách PSRs được chọn trong tab Xác nhận
+let confirmSelectedItems = new Set(); // itemKey của các sản phẩm được chọn đưa vào form
 
-function openBatchDoModal(maNx = null) {
+/**
+ * Thu thập danh sách nhân viên ngành EES từ user, san_pham và chi_tiet
+ */
+async function fetchEesStaffList() {
+    try {
+        const staffSet = new Set();
+
+        // 1. Lấy từ bảng user (nhân viên có phân quyền hoặc theo dõi ngành EES)
+        try {
+            const { data: users, error: uErr } = await sb.from('user').select('ho_ten, xem_data, phan_quyen');
+            if (!uErr && Array.isArray(users)) {
+                users.forEach(u => {
+                    if (!u.ho_ten) return;
+                    const xem = (u.xem_data || '').toUpperCase();
+                    const role = (u.phan_quyen || '').toUpperCase();
+                    if (role === 'ADMIN' || xem.includes('EES') || xem.includes('ALL')) {
+                        staffSet.add(u.ho_ten.trim());
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('Lỗi query user cho EES staff:', e);
+        }
+
+        // 2. Lấy từ bảng san_pham (phụ trách ngành EES)
+        try {
+            const { data: prods, error: pErr } = await sb.from('san_pham').select('phu_trach').eq('nganh', 'EES');
+            if (!pErr && Array.isArray(prods)) {
+                prods.forEach(p => {
+                    if (p.phu_trach) {
+                        p.phu_trach.split(/[,;\n]/).forEach(name => {
+                            const trimmed = name.trim();
+                            if (trimmed) staffSet.add(trimmed);
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('Lỗi query san_pham cho EES staff:', e);
+        }
+
+        // 3. Lấy từ rawLoanItems (người mượn / phụ trách ngành EES)
+        if (Array.isArray(rawLoanItems)) {
+            rawLoanItems.forEach(it => {
+                if ((it.nganh || '').toUpperCase() === 'EES') {
+                    if (it.yeu_cau) staffSet.add(it.yeu_cau.trim());
+                    if (it.phu_trach) staffSet.add(it.phu_trach.trim());
+                }
+            });
+        }
+
+        eesStaffList = Array.from(staffSet).filter(Boolean).sort((a, b) => a.localeCompare(b, 'vi'));
+    } catch (err) {
+        console.warn('Lỗi tổng hợp eesStaffList:', err);
+    }
+}
+
+/**
+ * Chuyển đổi giữa Tab 1 (Cập nhật DO) và Tab 2 (Xác nhận bàn giao)
+ */
+function switchBatchTab(tab) {
+    const tabUpdateBtn = document.getElementById('hn-batch-tab-update');
+    const tabConfirmBtn = document.getElementById('hn-batch-tab-confirm');
+    const panelUpdate = document.getElementById('hn-batch-panel-update');
+    const panelConfirm = document.getElementById('hn-batch-panel-confirm');
+
+    if (!tabUpdateBtn || !tabConfirmBtn || !panelUpdate || !panelConfirm) return;
+
+    if (tab === 'confirm') {
+        tabConfirmBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold border transition-all bg-blue-600 text-white border-blue-600 shadow-2xs flex items-center gap-1.5';
+        tabConfirmBtn.querySelector('svg')?.classList.remove('text-blue-600');
+        tabConfirmBtn.querySelector('svg')?.classList.add('text-white');
+
+        tabUpdateBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold border transition-all bg-white text-gray-700 border-gray-300 hover:bg-gray-100 flex items-center gap-1.5';
+        tabUpdateBtn.querySelector('svg')?.classList.remove('text-white');
+
+        panelUpdate.classList.add('hidden');
+        panelConfirm.classList.remove('hidden');
+
+        // Đồng bộ dữ liệu hiển thị trên preview biểu mẫu
+        renderConfirmDocumentPreview();
+    } else {
+        tabUpdateBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold border transition-all bg-blue-600 text-white border-blue-600 shadow-2xs flex items-center gap-1.5';
+        tabUpdateBtn.querySelector('svg')?.classList.add('text-white');
+
+        tabConfirmBtn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold border transition-all bg-white text-gray-700 border-gray-300 hover:bg-gray-100 flex items-center gap-1.5';
+        tabConfirmBtn.querySelector('svg')?.classList.remove('text-white');
+        tabConfirmBtn.querySelector('svg')?.classList.add('text-blue-600');
+
+        panelConfirm.classList.add('hidden');
+        panelUpdate.classList.remove('hidden');
+    }
+}
+
+async function openBatchDoModal(maNx = null) {
     const modal = document.getElementById('hang-no-batch-modal');
     if (!modal) return;
 
@@ -2234,7 +2457,7 @@ function openBatchDoModal(maNx = null) {
     batchPhotosMap.clear();
 
     modal.classList.remove('hidden');
-    onBatchDoChanged(maNx);
+    await onBatchDoChanged(maNx);
 }
 
 function closeBatchDoModal() {
@@ -2244,10 +2467,11 @@ function closeBatchDoModal() {
     currentBatchDo = '';
     document.getElementById('hn-batch-bms-dropdown')?.classList.add('hidden');
     document.getElementById('hn-batch-region-dropdown')?.classList.add('hidden');
+    document.getElementById('hn-confirm-psr-dropdown')?.classList.add('hidden');
     document.querySelectorAll('#hang-no-batch-modal [id$="-toggle"] svg').forEach(svg => svg.classList.remove('rotate-180'));
 }
 
-function onBatchDoChanged(maNx) {
+async function onBatchDoChanged(maNx) {
     const summaryEl = document.getElementById('hn-batch-do-summary');
     const countEl = document.getElementById('hn-batch-item-count');
     const listEl = document.getElementById('hn-batch-products-list');
@@ -2259,6 +2483,9 @@ function onBatchDoChanged(maNx) {
     if (noteInput) noteInput.value = '';
     if (defaultRadio) defaultRadio.checked = true;
     batchPhotosMap.clear();
+
+    // Mặc định mở Tab 1 (Cập nhật)
+    switchBatchTab('update');
 
     if (!maNx) {
         if (summaryEl) summaryEl.innerHTML = '';
@@ -2272,6 +2499,11 @@ function onBatchDoChanged(maNx) {
                 </div>
             `;
         }
+        confirmSelectedItems.clear();
+        confirmPsrList = [];
+        renderConfirmProductsChecklist([]);
+        renderConfirmPsrTags();
+        renderConfirmDocumentPreview();
         return;
     }
 
@@ -2304,11 +2536,360 @@ function onBatchDoChanged(maNx) {
 
     if (countEl) countEl.textContent = `${items.length} sản phẩm`;
 
-    // Render danh sách sản phẩm bên dưới
-    renderBatchProductsList(items);
+    if (listEl) {
+        listEl.innerHTML = `
+            <div class="p-6 text-center text-xs text-gray-400 italic bg-gray-50 border border-dashed border-gray-300 rounded-xl flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                <span>Đang tải danh sách sản phẩm và nhật ký đã lưu...</span>
+            </div>
+        `;
+    }
+
+    // Tải toàn bộ nhật ký mốc thời gian & ảnh đã lưu của đơn DO này
+    const batchItemTimelineMap = new Map();
+    try {
+        const { data: timelineData, error: tlErr } = await sb.from('hang_no_timeline')
+            .select('*')
+            .eq('ma_nx', maNx)
+            .order('thoi_gian', { ascending: false });
+
+        if (!tlErr && Array.isArray(timelineData)) {
+            timelineData.forEach(row => {
+                const k = `${row.ma_vt}_${row.lot || ''}`.toUpperCase();
+                if (!batchItemTimelineMap.has(k)) {
+                    batchItemTimelineMap.set(k, []);
+                }
+                batchItemTimelineMap.get(k).push(row);
+            });
+        }
+    } catch (e) {
+        console.warn('Lỗi tải timeline cho batch DO:', e);
+    }
+
+    // Render danh sách sản phẩm bên dưới Tab 1 cùng với nhật ký & ảnh đã lưu của từng con
+    renderBatchProductsList(items, batchItemTimelineMap);
+
+    // Khởi tạo Tab 2: Chọn tất cả sản phẩm thuộc đơn DO vào biểu mẫu
+    confirmSelectedItems.clear();
+    items.forEach(it => confirmSelectedItems.add(`${it.ma_vt}_${it.lot || ''}`));
+
+    // Khởi tạo người ký PSRs: Thêm người mượn của đơn này vào đầu danh sách
+    confirmPsrList = (borrower && borrower !== '-') ? [borrower] : [];
+
+    // Điền BM vào ô người ký BM
+    const bmConfirmInput = document.getElementById('hn-confirm-bm-input');
+    if (bmConfirmInput) bmConfirmInput.value = existingBms || '';
+
+    // Render các thành phần của Tab 2 (Xác nhận bàn giao)
+    renderConfirmProductsChecklist(items);
+    renderConfirmPsrTags();
+    renderConfirmDocumentPreview();
 }
 
-function renderBatchProductsList(items) {
+/**
+ * Render danh sách checklist sản phẩm trong Tab 2 Xác nhận
+ */
+function renderConfirmProductsChecklist(items) {
+    const container = document.getElementById('hn-confirm-products-checklist');
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+        container.innerHTML = '<span class="text-xs text-gray-400 italic p-1">Không có sản phẩm nào.</span>';
+        return;
+    }
+
+    container.innerHTML = items.map((it) => {
+        const itemKey = `${it.ma_vt}_${it.lot || ''}`;
+        const isChecked = confirmSelectedItems.has(itemKey);
+        return `
+            <label class="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-xs cursor-pointer hover:border-blue-400 transition-colors select-none">
+                <input type="checkbox" class="hn-confirm-item-cb text-blue-600 rounded focus:ring-0" data-item-key="${itemKey}" ${isChecked ? 'checked' : ''}>
+                <span class="font-mono font-bold text-blue-700">${it.ma_vt}</span>
+                <span class="text-gray-700 truncate max-w-[150px] md:max-w-[220px]" title="${it.ten_vt || ''}">${it.ten_vt || '-'}</span>
+                <span class="text-gray-400 font-mono text-[11px]">(LOT: ${it.lot || '-'})</span>
+            </label>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.hn-confirm-item-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const key = cb.dataset.itemKey;
+            if (cb.checked) {
+                confirmSelectedItems.add(key);
+            } else {
+                confirmSelectedItems.delete(key);
+            }
+            renderConfirmDocumentPreview();
+        });
+    });
+}
+
+/**
+ * Chọn / Bỏ chọn tất cả sản phẩm vào form xác nhận
+ */
+function toggleAllConfirmProducts() {
+    const items = rawLoanItems.filter(it => it.ma_nx === currentBatchDo);
+    if (confirmSelectedItems.size === items.length) {
+        confirmSelectedItems.clear();
+    } else {
+        items.forEach(it => confirmSelectedItems.add(`${it.ma_vt}_${it.lot || ''}`));
+    }
+    renderConfirmProductsChecklist(items);
+    renderConfirmDocumentPreview();
+}
+
+/**
+ * Thêm người ký PSR (ngành EES)
+ */
+function addConfirmPsr(name) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return;
+    if (!confirmPsrList.includes(trimmed)) {
+        confirmPsrList.push(trimmed);
+        if (!eesStaffList.includes(trimmed)) {
+            eesStaffList.push(trimmed);
+            eesStaffList.sort((a, b) => a.localeCompare(b, 'vi'));
+        }
+    }
+    const input = document.getElementById('hn-confirm-psr-input');
+    if (input) input.value = '';
+    renderConfirmPsrTags();
+    renderConfirmDocumentPreview();
+}
+
+/**
+ * Xóa người ký PSR
+ */
+function removeConfirmPsr(index) {
+    if (index >= 0 && index < confirmPsrList.length) {
+        confirmPsrList.splice(index, 1);
+        renderConfirmPsrTags();
+        renderConfirmDocumentPreview();
+    }
+}
+
+/**
+ * Render các thẻ tag người ký PSR
+ */
+function renderConfirmPsrTags() {
+    const container = document.getElementById('hn-confirm-psr-tags');
+    if (!container) return;
+
+    if (confirmPsrList.length === 0) {
+        container.innerHTML = '<span class="text-[11px] text-gray-400 italic">Chưa thêm người ký PSR nào.</span>';
+        return;
+    }
+
+    container.innerHTML = confirmPsrList.map((name, idx) => `
+        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200 shadow-2xs">
+            <span>${name}</span>
+            <button type="button" class="hn-confirm-remove-psr-btn text-blue-400 hover:text-red-600 font-bold ml-1 text-xs" data-idx="${idx}">✕</button>
+        </span>
+    `).join('');
+
+    container.querySelectorAll('.hn-confirm-remove-psr-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.idx);
+            removeConfirmPsr(idx);
+        });
+    });
+}
+
+/**
+ * Render biểu mẫu xác nhận GEN11 Demo Unit Tracking theo đúng mẫu và màu sắc
+ */
+function renderConfirmDocumentPreview() {
+    const tableBody = document.getElementById('hn-confirm-table-body');
+    const signaturesGrid = document.getElementById('hn-confirm-signatures-grid');
+    if (!tableBody || !signaturesGrid) return;
+
+    const items = rawLoanItems.filter(it => it.ma_nx === currentBatchDo);
+    const selectedItems = items.filter(it => confirmSelectedItems.has(`${it.ma_vt}_${it.lot || ''}`));
+
+    // Lấy thông tin chung hiện tại từ form
+    const currentBms = (document.getElementById('hn-batch-bms')?.value || '').trim();
+    const currentRegion = (document.getElementById('hn-batch-region')?.value || '').trim();
+    const currentBmSigner = (document.getElementById('hn-confirm-bm-input')?.value || currentBms || '').trim();
+
+    // Map số seri hiện tại từ các ô nhập ở Tab 1
+    const seriMap = new Map();
+    document.querySelectorAll('.hn-batch-seri-input').forEach(inp => {
+        seriMap.set(inp.dataset.itemKey, inp.value.trim());
+    });
+
+    // 1. Render các dòng bảng dữ liệu (Serial Number | BMs | PSRs | Regions)
+    if (selectedItems.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" style="padding: 20px; text-align: center; color: #64748b; font-style: italic; background-color: #f8fafc; border: 1px solid #cbd5e1;">
+                    Chưa có sản phẩm nào được chọn đưa vào biểu mẫu. Vui lòng tick chọn sản phẩm ở trên.
+                </td>
+            </tr>
+        `;
+    } else {
+        tableBody.innerHTML = selectedItems.map(item => {
+            const itemKey = `${item.ma_vt}_${item.lot || ''}`;
+            const seri = (seriMap.has(itemKey) ? seriMap.get(itemKey) : item.seri) || '-';
+            const bmsVal = currentBms || item.bms || '-';
+            const psrVal = item.yeu_cau || '-'; // Lấy tên người mượn theo đúng yêu cầu
+            const regionVal = currentRegion || item.region || '-';
+
+            return `
+                <tr style="background-color: #d8ecf8; color: #0e2e47; text-align: center; font-size: 13px; font-weight: 500;">
+                    <td style="padding: 9px 8px; border: 1px solid #a3c9e2; font-family: monospace; font-weight: bold; letter-spacing: 0.5px;">${seri}</td>
+                    <td style="padding: 9px 8px; border: 1px solid #a3c9e2;">${bmsVal}</td>
+                    <td style="padding: 9px 8px; border: 1px solid #a3c9e2; font-weight: 600;">${psrVal}</td>
+                    <td style="padding: 9px 8px; border: 1px solid #a3c9e2;">${regionVal}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // 2. Render khung chữ ký (SIGNATURE APPROVALS: 2 cột theo đúng mẫu)
+    // Cột trái: PSR 1, PSR 2, BM (hàng 3)
+    // Cột phải: PSR 3, PSR 4, PSR 5
+    const psrNames = [...confirmPsrList];
+    const todayStr = formatDateToDDMMYYYY(new Date().toISOString());
+
+    const signatureBoxes = [
+        { title: 'PSR', name: psrNames[0] || '' }, // Hàng 1, Cột Trái
+        { title: 'PSR', name: psrNames[2] || '' }, // Hàng 1, Cột Phải
+        { title: 'PSR', name: psrNames[1] || '' }, // Hàng 2, Cột Trái
+        { title: 'PSR', name: psrNames[3] || '' }, // Hàng 2, Cột Phải
+        { title: 'BM',  name: currentBmSigner   }, // Hàng 3, Cột Trái (Vị trí BM)
+        { title: 'PSR', name: psrNames[4] || '' }, // Hàng 3, Cột Phải
+    ];
+
+    // Nếu người dùng thêm nhiều hơn 5 PSRs, tự động mở rộng thêm các hàng phía sau
+    if (psrNames.length > 5) {
+        for (let i = 5; i < psrNames.length; i += 2) {
+            signatureBoxes.push({ title: 'PSR', name: psrNames[i] || '' });
+            signatureBoxes.push({ title: 'PSR', name: psrNames[i + 1] || '' });
+        }
+    }
+
+    signaturesGrid.innerHTML = signatureBoxes.map(box => `
+        <div style="border: 1px solid #14555f; background-color: #ffffff; border-radius: 2px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="background-color: #e0eff5; color: #0e2e47; text-align: center; font-weight: 700; font-size: 13px; padding: 6px 8px; border-bottom: 1px solid #a3c9e2; letter-spacing: 0.5px;">
+                ${box.title}
+            </div>
+            <div style="min-height: 48px; padding: 8px;"></div>
+            <div style="padding: 6px 12px 10px 12px; font-size: 12px; color: #0e2e47; border-top: 1px dashed #cbd5e1; background-color: #fafcfe;">
+                <div style="margin-bottom: 4px; display: flex; align-items: baseline;">
+                    <span style="font-weight: 600; min-width: 48px;">Name:</span>
+                    <span style="font-weight: 700; border-bottom: 1px solid #0e2e47; flex: 1; padding-left: 4px; min-height: 16px; color: #0e2e47;">
+                        ${box.name || '&nbsp;'}
+                    </span>
+                </div>
+                <div style="display: flex; align-items: baseline;">
+                    <span style="font-weight: 600; min-width: 48px;">Date:</span>
+                    <span style="border-bottom: 1px solid #0e2e47; flex: 1; padding-left: 4px; min-height: 16px; color: #475569;">
+                        ${todayStr}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Xuất biểu mẫu xác nhận thành file PDF chuẩn A4
+ */
+async function exportTrackingFormToPdf() {
+    const docRoot = document.getElementById('hn-confirm-document-root');
+    if (!docRoot) return;
+
+    if (typeof html2pdf === 'undefined') {
+        showToast('Thư viện tạo PDF đang tải, vui lòng thử lại sau giây lát hoặc dùng nút In.', 'warning');
+        return;
+    }
+
+    const exportBtn = document.getElementById('hn-confirm-export-pdf');
+    if (exportBtn) {
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = `
+            <svg class="w-4 h-4 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span>Đang xuất...</span>
+        `;
+    }
+
+    try {
+        const doCode = sanitizeFileName(currentBatchDo || 'GEN11').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const opt = {
+            margin: [8, 8, 8, 8],
+            filename: `GEN11_Demo_Tracking_${doCode}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        await html2pdf().set(opt).from(docRoot).save();
+        showToast(`Đã xuất PDF cho đơn DO ${currentBatchDo} thành công!`, 'success');
+    } catch (err) {
+        console.error('Lỗi xuất PDF:', err);
+        showToast('Lỗi xuất PDF: ' + (err.message || err), 'error');
+    } finally {
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = `
+                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-5.5-7.5l2.4 3.6h-1.6l-1.7-2.7-1.7 2.7H8.8l2.4-3.6-2.3-3.4h1.6l1.6 2.5 1.6-2.5h1.6l-2.3 3.4z"/>
+                </svg>
+                <span>Xuất PDF</span>
+            `;
+        }
+    }
+}
+
+/**
+ * Mở cửa sổ in biểu mẫu
+ */
+function printTrackingForm() {
+    const docRoot = document.getElementById('hn-confirm-document-root');
+    if (!docRoot) return;
+
+    const printWin = window.open('', '_blank', 'width=850,height=900');
+    if (!printWin) {
+        showToast('Vui lòng cho phép mở popup để in biểu mẫu.', 'warning');
+        return;
+    }
+
+    printWin.document.open();
+    printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>GEN11 Demo Unit Tracking - ${currentBatchDo || ''}</title>
+            <style>
+                @page { size: A4 portrait; margin: 12mm; }
+                body { margin: 0; padding: 20px; font-family: Arial, Helvetica, sans-serif; color: #0e2e47; }
+                table { border-collapse: collapse; width: 100%; }
+                @media print {
+                    body { padding: 0; }
+                }
+            </style>
+        </head>
+        <body>
+            ${docRoot.outerHTML}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                };
+            </script>
+        </body>
+        </html>
+    `);
+    printWin.document.close();
+}
+
+function renderBatchProductsList(items, batchItemTimelineMap = new Map()) {
     const listEl = document.getElementById('hn-batch-products-list');
     if (!listEl) return;
 
@@ -2319,10 +2900,13 @@ function renderBatchProductsList(items) {
 
     listEl.innerHTML = items.map((item, index) => {
         const itemKey = `${item.ma_vt}_${item.lot || ''}`;
+        const itemKeyUpper = itemKey.toUpperCase();
         const itemKeyClean = itemKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const logs = (batchItemTimelineMap && batchItemTimelineMap.get(itemKeyUpper)) || [];
+        const effectiveSeri = item.seri || (logs.find(l => l.seri)?.seri) || '';
 
         return `
-            <div class="bg-white border border-gray-200 rounded-xl p-3 md:p-3.5 shadow-2xs space-y-2">
+            <div class="bg-white border border-gray-200 rounded-xl p-3 md:p-3.5 shadow-2xs space-y-2.5">
                 <!-- Header của sản phẩm: STT, Mã VT, Tên VT -->
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs text-gray-400 font-semibold">#${index + 1}</span>
@@ -2338,9 +2922,9 @@ function renderBatchProductsList(items) {
                 </div>
 
                 <!-- Hàng Số Seri + 2 nút Chụp ảnh & Thêm ảnh trên cùng 1 hàng -->
-                <div class="flex items-center gap-2 pt-1">
+                <div class="flex items-center gap-2 pt-0.5">
                     <input type="text" class="hn-batch-seri-input flex-1 min-w-[120px] text-xs p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400 font-mono"
-                        data-item-key="${itemKey}" value="${item.seri || ''}" placeholder="Số Seri...">
+                        data-item-key="${itemKey}" value="${effectiveSeri}" placeholder="Số Seri...">
 
                     <input type="file" class="hn-batch-cam-file hidden" data-item-key="${itemKey}" accept="image/*" capture="environment" multiple>
                     <input type="file" class="hn-batch-gal-file hidden" data-item-key="${itemKey}" accept="image/*" multiple>
@@ -2355,8 +2939,59 @@ function renderBatchProductsList(items) {
                     </button>
                 </div>
 
-                <!-- Container preview ảnh đã chọn cho sản phẩm này -->
+                <!-- Container preview ảnh mới chọn cho sản phẩm này -->
                 <div id="hn-batch-preview-${itemKeyClean}" class="flex flex-wrap gap-2 pt-1 hidden"></div>
+
+                <!-- KHU VỰC HIỂN THỊ NHẬT KÝ & ẢNH ĐÃ LƯU CỦA SẢN PHẨM CON NÀY -->
+                ${logs.length > 0 ? `
+                    <div class="mt-2 pt-2 border-t border-gray-100">
+                        <div class="flex items-center justify-between text-[11px] font-bold text-gray-700 mb-1.5">
+                            <span class="flex items-center gap-1.5 text-blue-700">
+                                <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Nhật ký & Ảnh đã lưu (${logs.length} mốc):
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            ${logs.map(log => {
+                                const isGiaHan = log.loai_moc === 'gia_han';
+                                const badgeClass = isGiaHan ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200';
+                                const label = isGiaHan ? 'Gia hạn' : 'Báo trả';
+                                const logImgs = Array.isArray(log.hinh_anh) ? log.hinh_anh : [];
+                                return `
+                                    <div class="bg-gray-50/90 border border-gray-200 rounded-lg p-2.5 text-xs text-gray-700 space-y-1.5 shadow-3xs">
+                                        <div class="flex items-center justify-between gap-1 flex-wrap">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">${label}</span>
+                                                <span class="text-[11px] text-gray-500 font-medium">${formatDateTimeVN(log.thoi_gian)}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                ${log.nguoi_thuc_hien ? `<span class="text-[10px] text-gray-400">Bởi: <b class="text-gray-600 font-medium">${log.nguoi_thuc_hien}</b></span>` : ''}
+                                                <button type="button" class="hn-batch-delete-log-btn text-gray-300 hover:text-red-600 p-0.5 transition-colors" data-log-id="${log.id}" title="Xóa mốc này">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        ${log.ghi_chu ? `<div class="text-xs text-gray-800 whitespace-pre-wrap bg-white p-2 rounded border border-gray-200/80 leading-relaxed">${log.ghi_chu}</div>` : ''}
+
+                                        ${logImgs.length > 0 ? `
+                                            <div class="flex flex-wrap gap-1.5 pt-0.5">
+                                                ${logImgs.map(imgUrl => `
+                                                    <div class="relative group w-14 h-14 rounded-lg overflow-hidden border border-gray-300 bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity hn-batch-thumb-wrap" data-img-url="${imgUrl}">
+                                                        <img src="${imgUrl}" alt="Ảnh bằng chứng" loading="lazy" class="w-full h-full object-cover">
+                                                        <div class="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <svg class="w-4 h-4 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
     }).join('');
@@ -2386,6 +3021,46 @@ function renderBatchProductsList(items) {
                 await handleBatchItemPhotos(k, files);
             }
             e.target.value = '';
+        });
+    });
+
+    listEl.querySelectorAll('.hn-batch-seri-input').forEach(inp => {
+        inp.addEventListener('input', () => {
+            renderConfirmDocumentPreview();
+        });
+    });
+
+    // Mở xem ảnh phóng to (lightbox) khi click vào ảnh đã lưu
+    listEl.querySelectorAll('.hn-batch-thumb-wrap').forEach(wrap => {
+        wrap.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const url = wrap.dataset.imgUrl;
+            if (url) openLightbox(url);
+        });
+    });
+
+    // Xóa mốc nhật ký của sản phẩm con
+    listEl.querySelectorAll('.hn-batch-delete-log-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const logId = btn.dataset.logId;
+            const confirmed = await showConfirm('Bạn có chắc chắn muốn xóa mốc nhật ký này của sản phẩm?', 'Xác nhận xóa');
+            if (confirmed) {
+                showLoading(true);
+                try {
+                    const { error: delErr } = await sb.from('hang_no_timeline').delete().eq('id', logId);
+                    if (delErr) throw delErr;
+                    showToast('Đã xóa mốc nhật ký thành công!', 'success');
+                    await loadTimelineStats();
+                    applyFiltersAndRender(false);
+                    await onBatchDoChanged(currentBatchDo);
+                } catch (err) {
+                    console.error('Lỗi xóa log:', err);
+                    showToast('Lỗi xóa: ' + (err.message || err), 'error');
+                } finally {
+                    showLoading(false);
+                }
+            }
         });
     });
 }
@@ -2738,18 +3413,76 @@ export function initHangNoView() {
         if (e.target.id === 'hang-no-batch-modal') closeBatchDoModal();
     });
 
-    // In-app custom combobox dropdowns cho BMs & Region (không kích hoạt droplist trình duyệt)
+    // 2 Tab chuyển đổi trong Batch Modal
+    document.getElementById('hn-batch-tab-update')?.addEventListener('click', () => switchBatchTab('update'));
+    document.getElementById('hn-batch-tab-confirm')?.addEventListener('click', () => switchBatchTab('confirm'));
+
+    // Tab 2: Sự kiện chọn sản phẩm, thêm PSR, BM và In / Xuất PDF
+    document.getElementById('hn-confirm-toggle-all-products')?.addEventListener('click', toggleAllConfirmProducts);
+    document.getElementById('hn-confirm-add-psr-btn')?.addEventListener('click', () => {
+        const input = document.getElementById('hn-confirm-psr-input');
+        if (input && input.value.trim()) {
+            addConfirmPsr(input.value.trim());
+        }
+    });
+    document.getElementById('hn-confirm-psr-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const input = document.getElementById('hn-confirm-psr-input');
+            if (input && input.value.trim()) {
+                addConfirmPsr(input.value.trim());
+            }
+        }
+    });
+    document.getElementById('hn-confirm-bm-input')?.addEventListener('input', () => {
+        renderConfirmDocumentPreview();
+    });
+    document.getElementById('hn-confirm-print-btn')?.addEventListener('click', printTrackingForm);
+    document.getElementById('hn-confirm-export-pdf')?.addEventListener('click', exportTrackingFormToPdf);
+
+    // Đồng bộ BMs & Region từ Tab 1 sang Tab 2 khi nhập
+    document.getElementById('hn-batch-bms')?.addEventListener('input', () => {
+        const bmConfirm = document.getElementById('hn-confirm-bm-input');
+        if (bmConfirm && !bmConfirm.value) {
+            bmConfirm.value = document.getElementById('hn-batch-bms').value;
+        }
+        renderConfirmDocumentPreview();
+    });
+    document.getElementById('hn-batch-region')?.addEventListener('input', () => {
+        renderConfirmDocumentPreview();
+    });
+
+    // In-app custom combobox dropdowns cho BMs & Region & PSR (không kích hoạt droplist trình duyệt)
     setupCustomCombobox({
         inputId: 'hn-batch-bms',
         toggleBtnId: 'hn-batch-bms-toggle',
         dropdownId: 'hn-batch-bms-dropdown',
-        getOptions: () => distinctBmsList
+        getOptions: () => distinctBmsList,
+        onSelect: (val) => {
+            const bmConfirm = document.getElementById('hn-confirm-bm-input');
+            if (bmConfirm && !bmConfirm.value) {
+                bmConfirm.value = val;
+            }
+            renderConfirmDocumentPreview();
+        }
     });
     setupCustomCombobox({
         inputId: 'hn-batch-region',
         toggleBtnId: 'hn-batch-region-toggle',
         dropdownId: 'hn-batch-region-dropdown',
-        getOptions: () => distinctRegionList
+        getOptions: () => distinctRegionList,
+        onSelect: () => {
+            renderConfirmDocumentPreview();
+        }
+    });
+    setupCustomCombobox({
+        inputId: 'hn-confirm-psr-input',
+        toggleBtnId: 'hn-confirm-psr-toggle',
+        dropdownId: 'hn-confirm-psr-dropdown',
+        getOptions: () => eesStaffList,
+        onSelect: (val) => {
+            addConfirmPsr(val);
+        }
     });
     setupCustomCombobox({
         inputId: 'hn-tl-bms',
