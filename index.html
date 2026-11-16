@@ -1462,6 +1462,16 @@
                         </svg>
                         <span class="nav-text transition-opacity duration-300">Chi Tiết</span>
                     </button>
+                    <button data-view="view-request"
+                        class="nav-button w-full flex items-center px-6 py-3 text-gray-400 hover:bg-gray-700">
+                        <svg class="w-6 h-6 mr-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
+                            <rect x="9" y="3" width="6" height="4" rx="1"></rect>
+                            <path d="M9 14l2 2 4-4"></path>
+                        </svg>
+                        <span class="nav-text transition-opacity duration-300">Request</span>
+                    </button>
                     <button data-view="view-hang-no"
                         class="nav-button w-full flex items-center px-6 py-3 text-gray-400 hover:bg-gray-700">
                         <svg class="w-6 h-6 mr-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2"
@@ -2501,6 +2511,7 @@
                     </div>
 
                     <div id="view-chi-tiet" class="app-view hidden flex flex-col h-full overflow-hidden"></div>
+                    <div id="view-request" class="app-view hidden flex flex-col h-full overflow-hidden"></div>
                     <div id="view-hang-no" class="app-view hidden flex flex-col h-full overflow-hidden"></div>
 
                     <div id="view-cai-dat" class="app-view hidden flex flex-col h-full overflow-hidden pb-1">
@@ -2696,6 +2707,16 @@
                     <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
                 <span class="text-[10px] mt-1">Chi Tiết</span>
+            </button>
+            <button data-view="view-request"
+                class="nav-button mobile-nav-btn flex flex-col items-center justify-center w-full h-full">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" viewBox="0 0 24 24">
+                    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
+                    <rect x="9" y="3" width="6" height="4" rx="1"></rect>
+                    <path d="M9 14l2 2 4-4"></path>
+                </svg>
+                <span class="text-[10px] mt-1">Request</span>
             </button>
             <button data-view="view-hang-no"
                 class="nav-button mobile-nav-btn flex flex-col items-center justify-center w-full h-full">
@@ -3041,7 +3062,9 @@
                 </div>
             </div>
         </div>
-        </ <div id="san-pham-settings-modal"
+    </div>
+
+    <div id="san-pham-settings-modal"
             class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
         <div
             class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 flex flex-col modal-content-custom overflow-hidden border border-gray-200">
@@ -3081,7 +3104,7 @@
                 </div>
             </div>
         </div>
-    </div>div>
+    </div>
 
     <div id="image-viewer-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center modal-backdrop p-4"
         onclick="document.getElementById('image-viewer-modal').classList.add('hidden')">

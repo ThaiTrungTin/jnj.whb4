@@ -8,6 +8,7 @@ const AVAILABLE_VIEWS = [
     { id: 'view-san-pham', label: 'Sản Phẩm' },
     { id: 'view-ton-kho', label: 'Tồn Kho' },
     { id: 'view-chi-tiet', label: 'Chi Tiết' },
+    { id: 'view-request', label: 'Request' },
     { id: 'view-hang-no', label: 'Hàng Nợ' }
 ];
 

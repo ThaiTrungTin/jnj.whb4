@@ -1,5 +1,6 @@
 
 import { sb, cache, viewStates, currentUser, showLoading, showToast, debounce, renderPagination, filterButtonDefaultTexts, showView, updateMobileFilterIconStatus, openAutocomplete } from './app.js';
+import { buildColumnSettingsModalHtml, renderColumnConfigList, bindColumnSettingsModal } from './col-settings-ui.js';
 
 const OPTIONAL_COLUMNS_CT = [
     { key: 'ma-kho', label: 'Mã Kho', class: 'ct-col-ma-kho' },
@@ -469,33 +470,44 @@ const VIEW_HTML = `
     </div>
 `;
 
-const SETTINGS_MODAL_HTML = `
-    <div id="chi-tiet-settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 flex flex-col modal-content-custom">
-            <div class="p-4 border-b">
-                <h3 class="text-lg font-bold text-gray-800">Cài đặt hiển thị cột chi tiết</h3>
-                <p class="text-xs text-gray-500 mt-1">Chọn các cột bạn muốn hiển thị trên màn hình máy tính.</p>
-            </div>
-            <div class="p-6 overflow-y-auto max-h-[60vh]">
-                <div id="chi-tiet-column-toggles" class="grid grid-cols-1 gap-4"></div>
-            </div>
-            <div class="p-4 border-t flex justify-end">
-                <button id="chi-tiet-settings-close-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-bold shadow-sm">Xong</button>
-            </div>
-        </div>
-    </div>
-`;
+const SETTINGS_MODAL_HTML = buildColumnSettingsModalHtml('chi-tiet', 'Cài đặt &amp; Sắp xếp thứ tự cột chi tiết');
 
-const getColumnSettingsCT = () => {
+/**
+ * Danh sách đầy đủ các cột của bảng Chi Tiết theo vị trí gốc (idx) trong HTML.
+ * - Cột idx 11 (SL - chỉ mobile) và idx 17 (thao tác) luôn cố định ở cuối, không đưa vào danh sách.
+ * - Cột có `class` là cột tùy chọn (ẩn/hiện bằng class cũ), cột không có `class` là cột cơ bản.
+ */
+const CT_TOTAL_CELLS = 18;
+const CT_FIXED_TAIL_IDX = [11, 17];
+const CT_ALL_COLUMNS = [
+    { idx: 0, key: 'ngay', label: 'Ngày' },
+    { idx: 1, key: 'ma-kho', label: 'Mã Kho', class: 'ct-col-ma-kho' },
+    { idx: 2, key: 'ma-nx', label: 'Mã NX', canHide: false },
+    { idx: 3, key: 'ma-vach', label: 'Code + Lot + EXP', class: 'ct-col-ma-vach' },
+    { idx: 4, key: 'ma-vt', label: 'Mã VT', canHide: false },
+    { idx: 5, key: 'ten-vt', label: 'Tên Vật Tư', class: 'ct-col-ten-vt' },
+    { idx: 6, key: 'lot', label: 'Lot' },
+    { idx: 7, key: 'date', label: 'Date' },
+    { idx: 8, key: 'yeu-cau', label: 'Yêu Cầu', class: 'ct-col-yeu-cau' },
+    { idx: 9, key: 'nhap', label: 'Nhập', class: 'ct-col-nhap' },
+    { idx: 10, key: 'xuat', label: 'Xuất', class: 'ct-col-xuat' },
+    { idx: 12, key: 'loai', label: 'Loại', class: 'ct-col-loai' },
+    { idx: 13, key: 'nguoi-yc', label: 'Người YC' },
+    { idx: 14, key: 'muc-dich', label: 'Mục Đích', class: 'ct-col-muc-dich' },
+    { idx: 15, key: 'nganh', label: 'Ngành', class: 'ct-col-nganh' },
+    { idx: 16, key: 'phu-trach', label: 'Phụ Trách', class: 'ct-col-phu-trach' },
+];
+
+const getColumnSettingsCT = (useDefaults = false) => {
     let settings = null;
     try {
-        const saved = localStorage.getItem('chiTietColumnSettings');
+        const saved = useDefaults ? null : localStorage.getItem('chiTietColumnSettings');
         if (saved) settings = JSON.parse(saved);
     } catch (e) {}
 
     const defaultVisible = ['ma-kho', 'ma-vach', 'ten-vt', 'yeu-cau', 'nhap', 'xuat', 'loai', 'muc-dich'];
     if (!settings) {
-        return OPTIONAL_COLUMNS_CT.reduce((acc, col) => {
+        settings = OPTIONAL_COLUMNS_CT.reduce((acc, col) => {
             acc[col.key] = defaultVisible.includes(col.key);
             return acc;
         }, {});
@@ -503,12 +515,58 @@ const getColumnSettingsCT = () => {
     if (settings['ma-kho'] === undefined) {
         settings['ma-kho'] = true;
     }
+    // Cột cơ bản mặc định luôn hiện
+    CT_ALL_COLUMNS.forEach(c => {
+        if (!c.class && settings[c.key] === undefined) settings[c.key] = true;
+        if (c.canHide === false) settings[c.key] = true;
+    });
     return settings;
 };
 
 const saveColumnSettingsCT = (settings) => {
     localStorage.setItem('chiTietColumnSettings', JSON.stringify(settings));
 };
+
+const getColumnOrderCT = () => {
+    let order = null;
+    try { order = JSON.parse(localStorage.getItem('chiTietColumnOrder') || 'null'); } catch (e) {}
+    const allKeys = CT_ALL_COLUMNS.map(c => c.key);
+    if (!Array.isArray(order)) return allKeys;
+    const result = order.filter(k => allKeys.includes(k));
+    allKeys.forEach(k => { if (!result.includes(k)) result.push(k); });
+    return result;
+};
+
+const saveColumnOrderCT = (order) => {
+    localStorage.setItem('chiTietColumnOrder', JSON.stringify(order));
+};
+
+/**
+ * Sắp xếp lại vị trí các ô trong bảng Chi Tiết theo thứ tự đã lưu
+ */
+function applyChiTietColumnOrder() {
+    const thead = document.getElementById('chi-tiet-table-head');
+    const table = thead?.closest('table');
+    if (!table) return;
+
+    const order = getColumnOrderCT();
+    const keyToIdx = new Map(CT_ALL_COLUMNS.map(c => [c.key, c.idx]));
+    const finalIdx = [...order.map(k => keyToIdx.get(k)), ...CT_FIXED_TAIL_IDX];
+
+    table.querySelectorAll('tr').forEach(tr => {
+        if (tr.children.length !== CT_TOTAL_CELLS) return;
+        if (!tr.dataset.ctTagged) {
+            Array.from(tr.children).forEach((cell, i) => { cell.dataset.ctIdx = i; });
+            tr.dataset.ctTagged = '1';
+        }
+        const byIdx = {};
+        Array.from(tr.children).forEach(cell => { byIdx[cell.dataset.ctIdx] = cell; });
+        // Bỏ qua nếu đã đúng thứ tự
+        const current = Array.from(tr.children).map(c => Number(c.dataset.ctIdx));
+        if (current.every((v, i) => v === finalIdx[i])) return;
+        finalIdx.forEach(i => { if (byIdx[i]) tr.appendChild(byIdx[i]); });
+    });
+}
 
 function applyChiTietColumnSettings() {
     const settings = getColumnSettingsCT();
@@ -526,29 +584,56 @@ function applyChiTietColumnSettings() {
             }
         });
     });
+
+    applyChiTietColumnOrder();
+
+    // Ẩn/hiện các cột cơ bản (chỉ áp dụng trên máy tính)
+    const thead = document.getElementById('chi-tiet-table-head');
+    const table = thead?.closest('table');
+    if (table) {
+        CT_ALL_COLUMNS.filter(c => !c.class).forEach(col => {
+            const hide = settings[col.key] === false;
+            table.querySelectorAll(`[data-ct-idx="${col.idx}"]`).forEach(el => {
+                el.classList.toggle('md:hidden', hide);
+            });
+        });
+    }
 }
 
 function openChiTietSettingsModal() {
     const modal = document.getElementById('chi-tiet-settings-modal');
     const container = document.getElementById('chi-tiet-column-toggles');
-    const settings = getColumnSettingsCT();
+    if (!modal || !container) return;
 
-    container.innerHTML = OPTIONAL_COLUMNS_CT.map(col => `
-        <label class="flex items-center justify-between p-3 rounded-md bg-gray-50 border hover:bg-gray-100 cursor-pointer">
-            <span class="text-sm font-medium text-gray-700">${col.label}</span>
-            <input type="checkbox" class="ct-col-toggle-cb w-5 h-5 accent-blue-600" data-key="${col.key}" ${settings[col.key] ? 'checked' : ''}>
-        </label>
-    `).join('');
+    const colMap = new Map(CT_ALL_COLUMNS.map(c => [c.key, c]));
+    const toPending = (settings, order) => order.map(k => {
+        const c = colMap.get(k);
+        return {
+            key: c.key,
+            title: c.label,
+            canHide: c.canHide !== false,
+            visible: c.canHide === false ? true : !!settings[c.key]
+        };
+    });
 
+    let pending = toPending(getColumnSettingsCT(), getColumnOrderCT());
+    renderColumnConfigList(container, pending);
     modal.classList.remove('hidden');
 
-    container.querySelectorAll('.ct-col-toggle-cb').forEach(cb => {
-        cb.onchange = (e) => {
-            const key = e.target.dataset.key;
-            settings[key] = e.target.checked;
-            saveColumnSettingsCT(settings);
+    bindColumnSettingsModal('chi-tiet', {
+        onReset: () => {
+            const defaults = getColumnSettingsCT(true);
+            pending = toPending(defaults, CT_ALL_COLUMNS.map(c => c.key));
+            renderColumnConfigList(container, pending);
+        },
+        onSave: () => {
+            const newSettings = {};
+            pending.forEach(p => { newSettings[p.key] = p.visible; });
+            saveColumnSettingsCT(newSettings);
+            saveColumnOrderCT(pending.map(p => p.key));
             applyChiTietColumnSettings();
-        };
+            showToast('Đã lưu cấu hình cột', 'success');
+        }
     });
 }
 
@@ -2652,7 +2737,6 @@ export function initChiTietView() {
     document.getElementById('chi-tiet-btn-excel-mobile')?.addEventListener('click', handleExcelExport);
 
     document.getElementById('chi-tiet-btn-settings')?.addEventListener('click', openChiTietSettingsModal);
-    document.getElementById('chi-tiet-settings-close-btn')?.addEventListener('click', () => document.getElementById('chi-tiet-settings-modal').classList.add('hidden'));
 
     const tableBody = document.getElementById('chi-tiet-table-body');
     if (tableBody) {

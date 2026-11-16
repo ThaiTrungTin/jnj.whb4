@@ -1,4 +1,5 @@
 import { sb, currentUser, showLoading, showToast, showConfirm, debounce, renderPagination, sanitizeFileName } from './app.js';
+import { buildColumnSettingsModalHtml, renderColumnConfigList, bindColumnSettingsModal } from './col-settings-ui.js';
 
 let rawLoanItems = [];
 let filteredLoanItems = [];
@@ -65,6 +66,31 @@ function getHangNoColumnSettings() {
     const defaults = getDefaultColumnSettings();
     saveHangNoColumnSettings(defaults);
     return defaults;
+}
+
+/**
+ * Thứ tự cột (LocalStorage)
+ */
+function getHangNoColumnOrder() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('hangNoColumnOrder_v1') || 'null');
+        if (Array.isArray(saved)) return saved;
+    } catch (e) { }
+    return HANG_NO_COLUMNS.map(c => c.key);
+}
+
+function saveHangNoColumnOrder(order) {
+    try { localStorage.setItem('hangNoColumnOrder_v1', JSON.stringify(order)); } catch (e) { }
+}
+
+function getOrderedHangNoColumns() {
+    const order = getHangNoColumnOrder();
+    const map = new Map(HANG_NO_COLUMNS.map(c => [c.key, c]));
+    const result = [];
+    order.forEach(k => { if (map.has(k)) { result.push(map.get(k)); map.delete(k); } });
+    // Cột mới chưa có trong thứ tự đã lưu -> thêm cuối
+    map.forEach(c => result.push(c));
+    return result;
 }
 
 function saveHangNoColumnSettings(settings) {
@@ -218,55 +244,81 @@ async function compressImageFile(file, maxWidth = 1600, maxHeight = 1600, qualit
     });
 }
 
+/**
+ * Chỉ đóng modal khi cả mousedown và click đều nằm trên nền tối (tránh đóng nhầm khi bôi đen chữ kéo ra ngoài)
+ */
+function bindBackdropClose(modalId, onClose) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    let downOnBackdrop = false;
+    modal.addEventListener('mousedown', (e) => { downOnBackdrop = e.target === modal; });
+    modal.addEventListener('click', (e) => {
+        if (downOnBackdrop && e.target === modal) onClose();
+        downOnBackdrop = false;
+    });
+}
+
 const VIEW_HTML = `
-    <div class="flex flex-col h-full overflow-hidden p-2 md:p-4 bg-gray-50">
+    <div class="flex flex-col h-full overflow-hidden p-0.5 md:p-1.5 pb-0 select-text">
         <!-- Top KPI summary cards & Toolbar -->
-        <div class="flex-shrink-0 flex flex-col gap-3 mb-3">
-            <!-- KPI Cards: 4 ô thống kê -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
-                <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-xs flex items-center justify-between">
-                    <div>
-                        <div class="text-[11px] md:text-xs text-gray-500 font-medium uppercase">Số dòng nợ</div>
-                        <div id="hn-stat-rows" class="text-base md:text-2xl font-bold text-gray-800 mt-0.5">0</div>
+        <div class="flex-shrink-0 flex flex-col gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+            <!-- KPI Cards: 4 ô thống kê hiển thị nhỏ gọn trên 1 hàng trên mobile -->
+            <div class="grid grid-cols-4 gap-1 sm:gap-2 md:gap-3">
+                <div class="bg-white border border-gray-200 rounded-lg p-1.5 sm:p-2 md:p-3 shadow-xs flex items-center justify-between min-w-0">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[9px] sm:text-[10px] md:text-xs text-gray-500 font-medium uppercase truncate" title="Số dòng nợ">
+                            <span class="md:hidden">Dòng nợ</span>
+                            <span class="hidden md:inline">Số dòng nợ</span>
+                        </div>
+                        <div id="hn-stat-rows" class="text-xs sm:text-base md:text-2xl font-bold text-gray-800 mt-0.5 truncate">0</div>
                     </div>
-                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="hidden sm:flex w-6 h-6 md:w-10 md:h-10 rounded-full bg-blue-50 text-blue-600 items-center justify-center flex-shrink-0">
+                        <svg class="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                         </svg>
                     </div>
                 </div>
 
-                <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-xs flex items-center justify-between">
-                    <div>
-                        <div class="text-[11px] md:text-xs text-gray-500 font-medium uppercase">Tổng SL còn nợ</div>
-                        <div id="hn-stat-qty" class="text-base md:text-2xl font-bold text-red-600 mt-0.5">0</div>
+                <div class="bg-white border border-gray-200 rounded-lg p-1.5 sm:p-2 md:p-3 shadow-xs flex items-center justify-between min-w-0">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[9px] sm:text-[10px] md:text-xs text-gray-500 font-medium uppercase truncate" title="Tổng SL còn nợ">
+                            <span class="md:hidden">Còn nợ</span>
+                            <span class="hidden md:inline">Tổng SL còn nợ</span>
+                        </div>
+                        <div id="hn-stat-qty" class="text-xs sm:text-base md:text-2xl font-bold text-red-600 mt-0.5 truncate">0</div>
                     </div>
-                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="hidden sm:flex w-6 h-6 md:w-10 md:h-10 rounded-full bg-red-50 text-red-600 items-center justify-center flex-shrink-0">
+                        <svg class="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                         </svg>
                     </div>
                 </div>
 
-                <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-xs flex items-center justify-between">
-                    <div>
-                        <div class="text-[11px] md:text-xs text-gray-500 font-medium uppercase">SL Đã gia hạn</div>
-                        <div id="hn-stat-extended" class="text-base md:text-2xl font-bold text-amber-600 mt-0.5">0</div>
+                <div class="bg-white border border-gray-200 rounded-lg p-1.5 sm:p-2 md:p-3 shadow-xs flex items-center justify-between min-w-0">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[9px] sm:text-[10px] md:text-xs text-gray-500 font-medium uppercase truncate" title="SL đã gia hạn">
+                            <span class="md:hidden">Gia hạn</span>
+                            <span class="hidden md:inline">SL Đã gia hạn</span>
+                        </div>
+                        <div id="hn-stat-extended" class="text-xs sm:text-base md:text-2xl font-bold text-amber-600 mt-0.5 truncate">0</div>
                     </div>
-                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="hidden sm:flex w-6 h-6 md:w-10 md:h-10 rounded-full bg-amber-50 text-amber-600 items-center justify-center flex-shrink-0">
+                        <svg class="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
                 </div>
 
-                <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-xs flex items-center justify-between">
-                    <div>
-                        <div class="text-[11px] md:text-xs text-gray-500 font-medium uppercase">Người đang mượn</div>
-                        <div id="hn-stat-borrowers" class="text-base md:text-2xl font-bold text-gray-800 mt-0.5">0</div>
+                <div class="bg-white border border-gray-200 rounded-lg p-1.5 sm:p-2 md:p-3 shadow-xs flex items-center justify-between min-w-0">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[9px] sm:text-[10px] md:text-xs text-gray-500 font-medium uppercase truncate" title="Người đang mượn">
+                            <span class="md:hidden">Người mượn</span>
+                            <span class="hidden md:inline">Người đang mượn</span>
+                        </div>
+                        <div id="hn-stat-borrowers" class="text-xs sm:text-base md:text-2xl font-bold text-gray-800 mt-0.5 truncate">0</div>
                     </div>
-                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="hidden sm:flex w-6 h-6 md:w-10 md:h-10 rounded-full bg-gray-100 text-gray-600 items-center justify-center flex-shrink-0">
+                        <svg class="w-3.5 h-3.5 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                         </svg>
                     </div>
@@ -342,7 +394,7 @@ const VIEW_HTML = `
                 <thead id="hang-no-table-head" class="bg-gray-100 text-gray-700 uppercase text-[11px] font-semibold sticky top-0 z-10 border-b border-gray-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)] select-none">
                     <!-- Sẽ render động các thẻ TH có gắn class col-resizer và kích thước -->
                 </thead>
-                <tbody id="hang-no-table-body" class="divide-y divide-gray-200 text-xs text-gray-800">
+                <tbody id="hang-no-table-body" class="divide-y divide-gray-200 text-xs text-gray-800 select-text">
                     <tr>
                         <td colspan="15" class="p-8 text-center text-gray-500">Đang tải dữ liệu...</td>
                     </tr>
@@ -351,60 +403,38 @@ const VIEW_HTML = `
         </div>
 
         <!-- Pagination Footer -->
-        <div class="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 mt-3 bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-xs text-xs">
-            <div id="hang-no-pagination-info" class="text-gray-500 font-medium">Đang tải...</div>
-
-            <div class="flex items-center gap-2">
-                <div class="flex items-center gap-1">
-                    <span class="text-gray-500">Hiển thị:</span>
-                    <select id="hang-no-items-per-page" class="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none">
-                        <option value="25">25</option>
-                        <option value="50" selected>50</option>
-                        <option value="100">100</option>
-                        <option value="200">200</option>
-                    </select>
+        <div class="flex-shrink-0 flex flex-row justify-between items-center mt-0.5 mb-0 p-1 md:p-1.5 bg-white rounded-lg shadow-md flex-nowrap overflow-hidden pagination-bar">
+            <span id="hang-no-pagination-info" class="text-[8px] md:text-xs text-gray-600 mr-1 whitespace-nowrap flex-shrink-0"></span>
+            <div id="hn-summary-info" class="flex-grow flex justify-end md:justify-center overflow-hidden no-scrollbar px-1"></div>
+            <div class="flex items-center gap-0.5 flex-nowrap flex-shrink-0">
+                <select id="hang-no-items-per-page" class="hidden md:block px-2 py-0.5 border rounded-md bg-white text-xs">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
+                <button id="hang-no-prev-page" class="px-1.5 py-0.5 border rounded-md bg-white text-xs disabled:opacity-40 disabled:cursor-not-allowed">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <div class="flex items-center gap-0.5 mx-0.5">
+                    <input type="number" id="hang-no-page-input" min="1" value="1" class="w-6 md:w-12 text-center border rounded-md p-0.5 text-xs">
+                    <span id="hang-no-total-pages" class="text-xs text-gray-700 whitespace-nowrap">/ 1</span>
                 </div>
-
-                <div class="flex items-center gap-1">
-                    <button id="hang-no-prev-page" class="p-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                    </button>
-                    <div class="flex items-center gap-1 px-1">
-                        <input type="number" id="hang-no-page-input" min="1" value="1" class="w-12 text-center border border-gray-300 rounded py-0.5 text-xs">
-                        <span id="hang-no-total-pages" class="text-gray-500">/ 1</span>
-                    </div>
-                    <button id="hang-no-next-page" class="p-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    </button>
-                </div>
+                <button id="hang-no-next-page" class="px-1.5 py-0.5 border rounded-md bg-white text-xs disabled:opacity-40 disabled:cursor-not-allowed">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
             </div>
         </div>
     </div>
 `;
 
 const TIMELINE_AND_SETTINGS_MODAL_HTML = `
-    <!-- Modal Cài đặt hiển thị cột (giống View Chi Tiết) -->
-    <div id="hang-no-settings-modal" class="hidden fixed inset-0 z-[130] flex items-center justify-center modal-backdrop bg-black/50 p-4 select-none">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Cài đặt hiển thị cột</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Bật / tắt các cột theo nhu cầu trên màn hình máy tính.</p>
-                </div>
-                <button type="button" id="hn-settings-close-x" class="text-gray-400 hover:text-gray-600 text-lg p-1">✕</button>
-            </div>
-            <div class="p-4 overflow-y-auto max-h-[60vh] space-y-2">
-                <div id="hn-column-toggles" class="space-y-1.5"></div>
-            </div>
-            <div class="p-3 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
-                <button type="button" id="hn-settings-reset-btn" class="text-xs text-gray-500 hover:text-blue-600 underline">Khôi phục mặc định</button>
-                <button type="button" id="hn-settings-done-btn" class="px-5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold shadow-xs">Hoàn tất</button>
-            </div>
-        </div>
-    </div>
+    <!-- Modal Cài đặt & Sắp xếp thứ tự cột (giống View Tồn Kho) -->
+    ${buildColumnSettingsModalHtml('hang-no', 'Cài đặt &amp; Sắp xếp thứ tự cột hàng nợ', 'z-[130]')}
 
     <!-- Modal Timeline & Upload ảnh tối ưu Mobile (CHỈ CÒN 2 MỐC: GIA HẠN VÀ BÁO TRẢ) -->
-    <div id="hang-no-timeline-modal" class="hidden fixed inset-0 z-[120] flex items-end md:items-center justify-center modal-backdrop bg-black/60 p-0 md:p-4 select-none">
+    <div id="hang-no-timeline-modal" class="hidden fixed inset-0 z-[120] flex items-end md:items-center justify-center modal-backdrop bg-black/60 p-0 md:p-4 select-text">
         <div class="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-xl max-h-[92vh] md:max-h-[85vh] flex flex-col overflow-hidden">
             <!-- Header -->
             <div class="p-3 md:p-4 border-b border-gray-200 bg-gray-50 flex items-start justify-between gap-3 flex-shrink-0">
@@ -530,7 +560,7 @@ const TIMELINE_AND_SETTINGS_MODAL_HTML = `
     </div>
 
     <!-- Modal Cập nhật & Xác nhận bàn giao theo Đơn DO (2 Tab: Cập nhật DO & Xác nhận PDF) -->
-    <div id="hang-no-batch-modal" class="hidden fixed inset-0 z-[125] flex items-end md:items-center justify-center modal-backdrop bg-black/60 p-0 md:p-4 select-none">
+    <div id="hang-no-batch-modal" class="hidden fixed inset-0 z-[125] flex items-end md:items-center justify-center modal-backdrop bg-black/60 p-0 md:p-4 select-text">
         <div class="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full md:max-w-4xl max-h-[96vh] md:max-h-[92vh] flex flex-col overflow-hidden">
             <!-- Header with 2 Tabs -->
             <div class="p-2.5 md:p-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-2 flex-shrink-0">
@@ -884,24 +914,76 @@ async function loadTimelineStats() {
 }
 
 /**
+ * Lấy đối tượng người dùng hiện tại (kèm fallback từ sessionStorage)
+ */
+function getCurrentAppUser() {
+    if (currentUser) return currentUser;
+    try {
+        const saved = sessionStorage.getItem('loggedInUser');
+        if (saved) return JSON.parse(saved);
+    } catch (e) { }
+    return null;
+}
+
+/**
+ * So sánh đối chiếu danh tính người dùng một cách linh hoạt:
+ * Khớp cả họ tên đầy đủ, có dấu, không dấu, khoảng trắng thừa, gmail và username trước @.
+ */
+function isUserMatching(targetName, user = null) {
+    const activeUser = user || getCurrentAppUser();
+    if (!activeUser || !targetName) return false;
+
+    const cleanTarget = String(targetName).trim().toLowerCase();
+    if (!cleanTarget || cleanTarget === '-') return false;
+
+    const myName = String(activeUser.ho_ten || '').trim().toLowerCase();
+    const myGmail = String(activeUser.gmail || '').trim().toLowerCase();
+    const myEmailPrefix = myGmail.includes('@') ? myGmail.split('@')[0].trim() : '';
+
+    // 1. So khớp trực tiếp tuyệt đối
+    if (myName && cleanTarget === myName) return true;
+    if (myGmail && cleanTarget === myGmail) return true;
+    if (myEmailPrefix && cleanTarget === myEmailPrefix) return true;
+
+    // 2. So khớp chuẩn hóa khoảng trắng thừa
+    const normTarget = cleanTarget.replace(/\s+/g, ' ');
+    const normMyName = myName.replace(/\s+/g, ' ');
+    if (normMyName && normTarget === normMyName) return true;
+
+    // 3. So khớp không dấu tiếng Việt
+    const noToneTarget = removeVietnameseTones(normTarget);
+    const noToneMyName = removeVietnameseTones(normMyName);
+    if (noToneMyName && noToneTarget === noToneMyName) return true;
+
+    return false;
+}
+
+/**
  * Phân quyền hiển thị dữ liệu Hàng Nợ theo vai trò người dùng:
- * - Admin: Thấy toàn bộ dữ liệu (full).
- * - User & View: Thấy của ngành mình đang theo dõi (xem_data) + các dòng do chính mình mượn hoặc làm BMs.
+ * - Admin: Thấy toàn bộ dữ liệu (Full tất cả ngành).
+ * - User: Thấy các dòng thuộc ngành mình đang theo dõi (xem_data) + các dòng do chính mình mượn hoặc làm BMs.
+ * - View: Chỉ thấy những dòng có người mượn hoặc BMs trùng với tài khoản của mình.
  */
 function applyRolePermissionFilter(items) {
-    if (!currentUser) return items;
-    const role = (currentUser.phan_quyen || '').trim().toLowerCase();
+    const activeUser = getCurrentAppUser();
+    if (!activeUser) return items;
 
-    // Admin: Thấy toàn bộ (full)
+    const role = (activeUser.phan_quyen || '').trim().toLowerCase();
+
+    // 1. ADMIN: Thấy toàn bộ (Full)
     if (role === 'admin') {
         return items;
     }
 
-    const myName = (currentUser.ho_ten || '').trim().toLowerCase();
-    const myGmail = (currentUser.gmail || '').trim().toLowerCase();
-    const xemData = (currentUser.xem_data || '').trim().toLowerCase();
+    // 2. VIEW: Chỉ thấy những dòng do chính mình mượn hoặc làm BMs
+    if (role === 'view') {
+        return items.filter(item => {
+            return isUserMatching(item.yeu_cau, activeUser) || isUserMatching(item.bms, activeUser);
+        });
+    }
 
-    // Nếu xem_data là all hoặc * -> thấy full
+    // 3. USER: Thấy theo ngành đang theo dõi (xem_data) + các dòng do chính mình mượn / BMs
+    const xemData = (activeUser.xem_data || '').trim().toLowerCase();
     if (xemData === 'all' || xemData === '*') {
         return items;
     }
@@ -911,44 +993,33 @@ function applyRolePermissionFilter(items) {
         .map(n => n.trim().toLowerCase())
         .filter(Boolean);
 
-    // Cả User và View đều được thấy các đơn của người trong ngành mình theo dõi (xem_data) + các dòng do chính mình mượn hoặc làm BMs
     return items.filter(item => {
-        const itemBorrower = (item.yeu_cau || '').trim().toLowerCase();
         const itemNganh = (item.nganh || '').trim().toLowerCase();
-        const itemBm = (item.bms || '').trim().toLowerCase();
-        const isMyLoan = Boolean(myName && itemBorrower === myName) || Boolean(myGmail && itemBorrower === myGmail);
-        const isMyBm = Boolean(myName && itemBm === myName);
         const isMyNganh = Boolean(allowedNganh.length > 0 && allowedNganh.includes(itemNganh));
-        return isMyLoan || isMyBm || isMyNganh;
+        const isMyLoan = isUserMatching(item.yeu_cau, activeUser);
+        const isMyBm = isUserMatching(item.bms, activeUser);
+        return isMyNganh || isMyLoan || isMyBm;
     });
 }
 
 /**
  * Kiểm tra xem người dùng hiện tại có quyền sửa đơn DO hay không:
- * - Admin: toàn quyền sửa.
- * - View / User: Tên đăng nhập (hoặc họ tên) phải khớp với BMs hoặc Người mượn thì mới sửa được, ngược lại chỉ xem.
+ * - Admin: toàn quyền sửa tất cả các đơn DO.
+ * - View & User: Chỉ được sửa nếu họ tên / tài khoản khớp với BMs hoặc Người mượn của đơn này. Ngược lại chỉ xem.
  */
 function checkCanEditDo(items, existingBms = '') {
-    if (!currentUser) return false;
-    const role = (currentUser.phan_quyen || '').trim().toLowerCase();
+    const activeUser = getCurrentAppUser();
+    if (!activeUser) return false;
+
+    const role = (activeUser.phan_quyen || '').trim().toLowerCase();
     if (role === 'admin') return true;
 
-    const myName = (currentUser.ho_ten || '').trim().toLowerCase();
-    const myGmail = (currentUser.gmail || '').trim().toLowerCase();
-
-    if (!myName && !myGmail) return false;
-
-    if (existingBms) {
-        const b = existingBms.trim().toLowerCase();
-        if ((myName && b === myName) || (myGmail && b === myGmail)) return true;
+    if (existingBms && isUserMatching(existingBms, activeUser)) {
+        return true;
     }
 
     return items.some(it => {
-        const borrower = (it.yeu_cau || '').trim().toLowerCase();
-        const bm = (it.bms || '').trim().toLowerCase();
-        const matchBorrower = (myName && borrower === myName) || (myGmail && borrower === myGmail);
-        const matchBm = (myName && bm === myName) || (myGmail && bm === myGmail);
-        return matchBorrower || matchBm;
+        return isUserMatching(it.yeu_cau, activeUser) || isUserMatching(it.bms, activeUser);
     });
 }
 
@@ -956,20 +1027,13 @@ function checkCanEditDo(items, existingBms = '') {
  * Kiểm tra xem người dùng hiện tại có quyền sửa dòng hàng nợ con hay không
  */
 function canEditHangNoItem(item) {
-    if (!currentUser || !item) return false;
-    const role = (currentUser.phan_quyen || '').trim().toLowerCase();
+    const activeUser = getCurrentAppUser();
+    if (!activeUser || !item) return false;
+
+    const role = (activeUser.phan_quyen || '').trim().toLowerCase();
     if (role === 'admin') return true;
 
-    const myName = (currentUser.ho_ten || '').trim().toLowerCase();
-    const myGmail = (currentUser.gmail || '').trim().toLowerCase();
-
-    if (!myName && !myGmail) return false;
-
-    const borrower = (item.yeu_cau || '').trim().toLowerCase();
-    const bm = (item.bms || '').trim().toLowerCase();
-
-    return (myName && (borrower === myName || bm === myName)) ||
-           (myGmail && (borrower === myGmail || bm === myGmail));
+    return isUserMatching(item.yeu_cau, activeUser) || isUserMatching(item.bms, activeUser);
 }
 
 /**
@@ -1048,7 +1112,7 @@ function renderTableHeader() {
     if (!thead) return;
 
     const colSettings = getHangNoColumnSettings();
-    const visibleCols = HANG_NO_COLUMNS.filter(c => colSettings[c.key] !== false);
+    const visibleCols = getOrderedHangNoColumns().filter(c => c.canHide === false || colSettings[c.key] !== false);
     const { widths: effectiveWidths, totalWidth, isFullWidth } = getEffectiveColumnWidths(visibleCols);
 
     const thsHtml = visibleCols.map(col => {
@@ -1307,7 +1371,7 @@ function renderTableRows(items, startIndex) {
     if (!tbody) return;
 
     const colSettings = getHangNoColumnSettings();
-    const visibleCols = HANG_NO_COLUMNS.filter(c => colSettings[c.key] !== false);
+    const visibleCols = getOrderedHangNoColumns().filter(c => c.canHide === false || colSettings[c.key] !== false);
     const { widths: effectiveWidths, isFullWidth } = getEffectiveColumnWidths(visibleCols);
 
     if (items.length === 0) {
@@ -1349,11 +1413,11 @@ function renderTableRows(items, startIndex) {
 
         // Dòng Tiêu đề nhóm DO (Nằm ở đầu nhóm với nút Cập nhật chung DO và Mục đích mượn)
         html += `
-            <tr class="bg-blue-50/70 border-t-2 border-b border-blue-200 select-none">
-                <td colspan="${visibleCols.length}" class="px-3 py-1.5">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <div class="flex items-center gap-2 flex-wrap text-xs">
-                            <span class="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200 shadow-2xs">${group.ma_nx}</span>
+            <tr class="bg-blue-50/70 border-t-2 border-b border-blue-200 select-text">
+                <td colspan="${visibleCols.length}" class="px-2 md:px-3 py-1.5 relative">
+                    <div class="flex items-center justify-between gap-1.5 min-w-full">
+                        <div class="flex items-center gap-1.5 md:gap-2 flex-wrap text-xs flex-1 min-w-0 pr-2">
+                            <span class="font-mono font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200 shadow-2xs">${group.ma_nx}</span>
                             <span class="text-gray-800 font-semibold">Người mượn: <b class="text-gray-900">${group.yeu_cau || '-'}</b></span>
                             <span class="text-gray-400">•</span>
                             <span class="text-gray-600">${groupDate}</span>
@@ -1364,9 +1428,9 @@ function renderTableRows(items, startIndex) {
                             ${group.muc_dich ? `<span class="px-2 py-0.5 rounded text-[11px] bg-white text-gray-700 border border-gray-200 max-w-sm truncate" title="${group.muc_dich}">Mục đích: <b class="text-gray-900 font-medium">${group.muc_dich}</b></span>` : ''}
                             <span class="text-gray-500 font-normal">(${group.items.length} mặt hàng • Còn nợ: <b class="text-red-600">${totalGroupDebt.toLocaleString('vi-VN')}</b>)</span>
                         </div>
-                        <button type="button" class="hn-quick-batch-btn inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 border border-blue-300 rounded text-xs font-semibold shadow-2xs transition-all active:scale-95" data-ma-nx="${group.ma_nx}" title="Cập nhật hoặc xuất biểu mẫu xác nhận cho đơn DO này">
-                            <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            <span>Cập nhật</span>
+                        <button type="button" class="hn-quick-batch-btn sticky right-1 md:right-2 z-10 flex-shrink-0 inline-flex items-center justify-center gap-1 p-1.5 md:px-2.5 md:py-1 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 border border-blue-300 rounded text-xs font-semibold shadow-xs transition-all active:scale-95 ml-auto" data-ma-nx="${group.ma_nx}" title="Cập nhật hoặc xuất biểu mẫu xác nhận cho đơn DO này">
+                            <svg class="w-3.5 h-3.5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            <span class="hidden md:inline">Cập nhật</span>
                         </button>
                     </div>
                 </td>
@@ -1504,11 +1568,31 @@ function renderPaginationFooter(totalItems, from, to, totalPages) {
     const nextBtn = document.getElementById('hang-no-next-page');
 
     if (infoEl) {
-        if (totalItems === 0) {
-            infoEl.textContent = '0 dòng';
-        } else {
-            infoEl.textContent = `Hiển thị ${from + 1} - ${to + 1} trên ${totalItems} dòng`;
-        }
+        infoEl.textContent = totalItems === 0
+            ? '(Hiển thị 0 trên 0)'
+            : `(Hiển thị ${from + 1} - ${to + 1} trên ${totalItems})`;
+    }
+
+    // Tóm tắt giữa thanh phân trang (giống Tồn Kho / Chi Tiết)
+    const summaryEl = document.getElementById('hn-summary-info');
+    if (summaryEl) {
+        const items = filteredLoanItems || [];
+        const doCount = new Set(items.map(i => i.ma_nx)).size;
+        const totalMuon = items.reduce((s, i) => s + (Number(i.xuat) || 0), 0);
+        const totalTra = items.reduce((s, i) => s + (Number(i.da_tra) || 0), 0);
+        const totalNo = items.reduce((s, i) => s + (Number(i.sl_con_no) || 0), 0);
+        summaryEl.innerHTML = `
+            <div class="mobile-summary-container">
+                <div class="mobile-summary-content flex items-center gap-1 sm:gap-2 text-[7px] sm:text-[10px] md:text-xs font-bold border-x border-gray-100 px-2">
+                    <span class="text-blue-600 whitespace-nowrap hidden md:inline" title="Số đơn DO">DO: ${doCount.toLocaleString('vi-VN')}</span>
+                    <span class="text-gray-200 hidden md:inline">|</span>
+                    <span class="text-black whitespace-nowrap" title="Tổng SL mượn">M:${totalMuon.toLocaleString('vi-VN')}</span>
+                    <span class="text-gray-200">|</span>
+                    <span class="text-green-600 whitespace-nowrap" title="Tổng SL đã trả">T:${totalTra.toLocaleString('vi-VN')}</span>
+                    <span class="text-gray-200">|</span>
+                    <span class="text-red-600 whitespace-nowrap" title="Tổng SL còn nợ">Nợ:${totalNo.toLocaleString('vi-VN')}</span>
+                </div>
+            </div>`;
     }
 
     if (pageInput) {
@@ -1696,40 +1780,35 @@ function openHangNoFilterPopover(button, filterKey, title) {
  */
 function openColumnSettingsModal() {
     const modal = document.getElementById('hang-no-settings-modal');
-    const container = document.getElementById('hn-column-toggles');
+    const container = document.getElementById('hang-no-column-toggles');
     if (!modal || !container) return;
 
     const currentSettings = getHangNoColumnSettings();
+    const toPending = (settings, cols) => cols.map(c => ({
+        key: c.key,
+        title: c.label,
+        canHide: c.canHide !== false,
+        visible: c.canHide === false ? true : settings[c.key] !== false
+    }));
 
-    container.innerHTML = HANG_NO_COLUMNS.filter(c => c.canHide).map(col => `
-        <label class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 cursor-pointer text-xs">
-            <span class="font-medium text-gray-700">${col.label}</span>
-            <input type="checkbox" class="hn-col-toggle-cb w-4 h-4 accent-blue-600 rounded" data-key="${col.key}" ${currentSettings[col.key] !== false ? 'checked' : ''}>
-        </label>
-    `).join('');
-
+    let pending = toPending(currentSettings, getOrderedHangNoColumns());
+    renderColumnConfigList(container, pending);
     modal.classList.remove('hidden');
 
-    container.querySelectorAll('.hn-col-toggle-cb').forEach(cb => {
-        cb.onchange = (e) => {
-            const key = e.target.dataset.key;
-            currentSettings[key] = e.target.checked;
-            saveHangNoColumnSettings(currentSettings);
+    bindColumnSettingsModal('hang-no', {
+        onReset: () => {
+            pending = toPending(getDefaultColumnSettings(), HANG_NO_COLUMNS);
+            renderColumnConfigList(container, pending);
+        },
+        onSave: () => {
+            const newSettings = {};
+            pending.forEach(p => { newSettings[p.key] = p.visible; });
+            saveHangNoColumnSettings(newSettings);
+            saveHangNoColumnOrder(pending.map(p => p.key));
             applyFiltersAndRender(true);
-        };
+            showToast('Đã lưu cấu hình cột', 'success');
+        }
     });
-
-    document.getElementById('hn-settings-reset-btn').onclick = () => {
-        const defaults = getDefaultColumnSettings();
-        saveHangNoColumnSettings(defaults);
-        openColumnSettingsModal();
-        applyFiltersAndRender(true);
-        showToast('Đã khôi phục cài đặt cột mặc định', 'info');
-    };
-
-    const closeHandler = () => modal.classList.add('hidden');
-    document.getElementById('hn-settings-close-x').onclick = closeHandler;
-    document.getElementById('hn-settings-done-btn').onclick = closeHandler;
 }
 
 /**
@@ -1789,32 +1868,72 @@ function openTimelineModal(item) {
     const modal = document.getElementById('hang-no-timeline-modal');
     if (!modal) return;
 
+    const isEditable = canEditHangNoItem(item);
+
     // Header info
     const badgeDo = document.getElementById('hn-tl-badge-dono');
     const summaryEl = document.getElementById('hn-tl-item-summary');
     if (badgeDo) badgeDo.textContent = item.ma_nx;
     if (summaryEl) {
-        summaryEl.textContent = `${item.ma_vt} • ${item.ten_vt || ''} ${item.lot ? `• LOT: ${item.lot}` : ''} • Người mượn: ${item.yeu_cau || 'N/A'}`;
+        summaryEl.innerHTML = `
+            <span>${item.ma_vt} • ${item.ten_vt || ''} ${item.lot ? `• LOT: ${item.lot}` : ''} • Người mượn: <b>${item.yeu_cau || 'N/A'}</b></span>
+            ${!isEditable ? '<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-gray-200 text-gray-700 font-bold border border-gray-300">👁️ Chỉ xem</span>' : ''}
+        `;
     }
 
     // Điền sẵn 3 trường thông tin: Seri, BMs, Region
     const seriInput = document.getElementById('hn-tl-seri');
     const bmsInput = document.getElementById('hn-tl-bms');
     const regionInput = document.getElementById('hn-tl-region');
-    if (seriInput) seriInput.value = item.seri || '';
-    if (bmsInput) bmsInput.value = item.bms || '';
-    if (regionInput) regionInput.value = item.region || '';
+    if (seriInput) {
+        seriInput.value = item.seri || '';
+        seriInput.disabled = !isEditable;
+        seriInput.readOnly = !isEditable;
+    }
+    if (bmsInput) {
+        bmsInput.value = item.bms || '';
+        bmsInput.disabled = !isEditable;
+        bmsInput.readOnly = !isEditable;
+    }
+    const bmsToggle = document.getElementById('hn-tl-bms-toggle');
+    if (bmsToggle) bmsToggle.style.display = isEditable ? '' : 'none';
+
+    if (regionInput) {
+        regionInput.value = item.region || '';
+        regionInput.disabled = !isEditable;
+        regionInput.readOnly = !isEditable;
+    }
+    const regionToggle = document.getElementById('hn-tl-region-toggle');
+    if (regionToggle) regionToggle.style.display = isEditable ? '' : 'none';
+
+    document.querySelectorAll('input[name="hn-moc-type"]').forEach(r => {
+        r.disabled = !isEditable;
+    });
 
     // Reset Form (mặc định chọn Gia hạn)
     const noteEl = document.getElementById('hn-tl-note');
-    if (noteEl) noteEl.value = '';
+    if (noteEl) {
+        noteEl.value = '';
+        noteEl.disabled = !isEditable;
+        noteEl.readOnly = !isEditable;
+        noteEl.placeholder = isEditable ? 'Ghi chú (lý do gia hạn, ngày dự kiến trả...)' : 'Chế độ chỉ xem - Chỉ BMs hoặc Người mượn mới có quyền sửa';
+    }
     const defaultRadio = document.querySelector('input[name="hn-moc-type"][value="gia_han"]');
     if (defaultRadio) defaultRadio.checked = true;
+
+    const camBtn = document.getElementById('hn-trigger-camera');
+    const galBtn = document.getElementById('hn-trigger-gallery');
+    if (camBtn) camBtn.style.display = isEditable ? '' : 'none';
+    if (galBtn) galBtn.style.display = isEditable ? '' : 'none';
+
+    const saveBtn = document.getElementById('hn-save-timeline-btn');
+    if (saveBtn) saveBtn.style.display = isEditable ? '' : 'none';
+
     renderSelectedPhotoPreviews();
 
     modal.classList.remove('hidden');
 
-    fetchAndRenderTimeline(item);
+    fetchAndRenderTimeline(item, isEditable);
 }
 
 function closeTimelineModal() {
@@ -1827,7 +1946,7 @@ function closeTimelineModal() {
     document.querySelectorAll('#hang-no-timeline-modal [id$="-toggle"] svg').forEach(svg => svg.classList.remove('rotate-180'));
 }
 
-async function fetchAndRenderTimeline(item) {
+async function fetchAndRenderTimeline(item, isEditable = true) {
     const listEl = document.getElementById('hn-timeline-list');
     if (!listEl) return;
 
@@ -1909,9 +2028,11 @@ async function fetchAndRenderTimeline(item) {
                             <span class="px-2 py-0.5 rounded text-[11px] font-bold border ${cfg.bg}">${cfg.label}</span>
                             <div class="flex items-center gap-2">
                                 <span class="text-[11px] text-gray-500 font-medium">${formatDateTimeVN(entry.thoi_gian)}</span>
-                                <button type="button" class="hn-delete-timeline-btn text-gray-300 hover:text-red-600 p-0.5 transition-colors" data-id="${entry.id}" title="Xóa mốc này">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
+                                ${isEditable ? `
+                                    <button type="button" class="hn-delete-timeline-btn text-gray-300 hover:text-red-600 p-0.5 transition-colors" data-id="${entry.id}" title="Xóa mốc này">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
 
@@ -2076,6 +2197,11 @@ function renderSelectedPhotoPreviews() {
 async function saveTimelineEntry() {
     if (!currentTimelineTarget) return;
 
+    if (!canEditHangNoItem(currentTimelineTarget)) {
+        showToast('Bạn không có quyền chỉnh sửa mục này (chỉ BMs hoặc Người mượn mới có quyền sửa).', 'warning');
+        return;
+    }
+
     const note = (document.getElementById('hn-tl-note')?.value || '').trim();
     const typeRadio = document.querySelector('input[name="hn-moc-type"]:checked');
     const loaiMoc = typeRadio ? typeRadio.value : 'gia_han';
@@ -2188,20 +2314,20 @@ async function saveTimelineEntry() {
             showToast('Đã cập nhật thông tin thành công!', 'success');
         }
 
-    document.getElementById('hn-tl-note').value = '';
-    selectedNewPhotos = [];
-    renderSelectedPhotoPreviews();
+        document.getElementById('hn-tl-note').value = '';
+        selectedNewPhotos = [];
+        renderSelectedPhotoPreviews();
 
-    await fetchAndRenderTimeline(currentTimelineTarget);
-    await loadTimelineStats();
-    applyFiltersAndRender(false);
+        await fetchAndRenderTimeline(currentTimelineTarget);
+        await loadTimelineStats();
+        applyFiltersAndRender(false);
 
-} catch (err) {
-    console.error('Lỗi lưu mốc thời gian:', err);
-    showToast('Lỗi: ' + (err.message || err), 'error');
-} finally {
-    showLoading(false);
-}
+    } catch (err) {
+        console.error('Lỗi lưu mốc thời gian:', err);
+        showToast('Lỗi: ' + (err.message || err), 'error');
+    } finally {
+        showLoading(false);
+    }
 }
 
 
@@ -2561,8 +2687,46 @@ async function onBatchDoChanged(maNx) {
     // Điền sẵn BMs và Region chung (lấy từ dữ liệu đã lưu của đơn DO này)
     const existingBms = items.find(it => it.bms)?.bms || '';
     const existingRegion = items.find(it => it.region)?.region || '';
-    if (bmsInput) bmsInput.value = existingBms;
-    if (regionInput) regionInput.value = existingRegion;
+
+    // Kiểm tra quyền sửa: Chỉ BMs, Người mượn hoặc Admin mới có quyền sửa
+    const isEditable = checkCanEditDo(items, existingBms);
+
+    if (bmsInput) {
+        bmsInput.value = existingBms;
+        bmsInput.disabled = !isEditable;
+        bmsInput.readOnly = !isEditable;
+    }
+    const bmsToggle = document.getElementById('hn-batch-bms-toggle');
+    if (bmsToggle) bmsToggle.style.display = isEditable ? '' : 'none';
+
+    if (regionInput) {
+        regionInput.value = existingRegion;
+        regionInput.disabled = !isEditable;
+        regionInput.readOnly = !isEditable;
+    }
+    const regionToggle = document.getElementById('hn-batch-region-toggle');
+    if (regionToggle) regionToggle.style.display = isEditable ? '' : 'none';
+
+    document.querySelectorAll('input[name="hn-batch-moc-type"]').forEach(r => {
+        r.disabled = !isEditable;
+    });
+
+    if (noteInput) {
+        noteInput.disabled = !isEditable;
+        noteInput.readOnly = !isEditable;
+        noteInput.placeholder = isEditable
+            ? 'Ghi chú (lý do gia hạn, ngày dự kiến trả...)'
+            : 'Chế độ chỉ xem - Chỉ BMs hoặc Người mượn mới có quyền sửa';
+    }
+
+    const saveBtn = document.getElementById('hn-batch-save-btn');
+    if (saveBtn) {
+        if (isEditable) {
+            saveBtn.classList.remove('hidden');
+        } else {
+            saveBtn.classList.add('hidden');
+        }
+    }
 
     const borrower = items[0]?.yeu_cau || '-';
     const loanDate = formatDateToDDMMYYYY(items[0]?.thoi_gian);
@@ -2576,6 +2740,7 @@ async function onBatchDoChanged(maNx) {
                 <span>Người mượn: <b>${borrower}</b></span>
                 <span>• Ngày mượn: <b>${loanDate}</b></span>
                 <span class="px-1.5 py-0.5 rounded text-[11px] bg-amber-100 text-amber-800 font-semibold">${soNgay} ngày</span>
+                ${!isEditable ? `<span class="px-2 py-0.5 rounded text-[11px] bg-gray-200 text-gray-700 font-bold border border-gray-300">👁️ Chỉ xem</span>` : ''}
             </div>
             <div class="text-xs">
                 <span>Tổng SL còn nợ: <b class="text-red-600 font-bold">${totalDebt.toLocaleString('vi-VN')}</b></span>
@@ -2619,7 +2784,7 @@ async function onBatchDoChanged(maNx) {
     }
 
     // Render danh sách sản phẩm bên dưới Tab 1 cùng với nhật ký & ảnh đã lưu của từng con
-    renderBatchProductsList(items, batchItemTimelineMap);
+    renderBatchProductsList(items, batchItemTimelineMap, isEditable);
 
     // Khởi tạo Tab 2: Chọn tất cả sản phẩm thuộc đơn DO vào biểu mẫu
     confirmSelectedItems.clear();
@@ -2801,14 +2966,13 @@ function renderConfirmDocumentPreview() {
     // Cột trái: PSR 1, PSR 2, BM (hàng 3)
     // Cột phải: PSR 3, PSR 4, PSR 5
     const psrNames = [...confirmPsrList];
-    const todayStr = formatDateToDDMMYYYY(new Date().toISOString());
 
     const signatureBoxes = [
         { title: 'PSR', name: psrNames[0] || '' }, // Hàng 1, Cột Trái
         { title: 'PSR', name: psrNames[2] || '' }, // Hàng 1, Cột Phải
         { title: 'PSR', name: psrNames[1] || '' }, // Hàng 2, Cột Trái
         { title: 'PSR', name: psrNames[3] || '' }, // Hàng 2, Cột Phải
-        { title: 'BM',  name: currentBmSigner   }, // Hàng 3, Cột Trái (Vị trí BM)
+        { title: 'BM', name: currentBmSigner }, // Hàng 3, Cột Trái (Vị trí BM)
         { title: 'PSR', name: psrNames[4] || '' }, // Hàng 3, Cột Phải
     ];
 
@@ -2835,9 +2999,7 @@ function renderConfirmDocumentPreview() {
                 </div>
                 <div style="display: flex; align-items: baseline;">
                     <span style="font-weight: 600; min-width: 48px;">Date:</span>
-                    <span style="border-bottom: 1px solid #0e2e47; flex: 1; padding-left: 4px; min-height: 16px; color: #475569;">
-                        ${todayStr}
-                    </span>
+                    <span style="border-bottom: 1px solid #0e2e47; flex: 1; min-height: 16px;">&nbsp;</span>
                 </div>
             </div>
         </div>
@@ -2938,7 +3100,7 @@ function printTrackingForm() {
     printWin.document.close();
 }
 
-function renderBatchProductsList(items, batchItemTimelineMap = new Map()) {
+function renderBatchProductsList(items, batchItemTimelineMap = new Map(), isEditable = true) {
     const listEl = document.getElementById('hn-batch-products-list');
     if (!listEl) return;
 
@@ -2972,20 +3134,22 @@ function renderBatchProductsList(items, batchItemTimelineMap = new Map()) {
 
                 <!-- Hàng Số Seri + 2 nút Chụp ảnh & Thêm ảnh trên cùng 1 hàng -->
                 <div class="flex items-center gap-2 pt-0.5">
-                    <input type="text" class="hn-batch-seri-input flex-1 min-w-[120px] text-xs p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white placeholder-gray-400 font-mono"
-                        data-item-key="${itemKey}" value="${effectiveSeri}" placeholder="Số Seri...">
+                    <input type="text" class="hn-batch-seri-input flex-1 min-w-[120px] text-xs p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono ${!isEditable ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white placeholder-gray-400'}"
+                        data-item-key="${itemKey}" value="${effectiveSeri}" placeholder="${isEditable ? 'Số Seri...' : 'Chưa có Seri'}" ${!isEditable ? 'disabled readonly' : ''}>
 
-                    <input type="file" class="hn-batch-cam-file hidden" data-item-key="${itemKey}" accept="image/*" capture="environment" multiple>
-                    <input type="file" class="hn-batch-gal-file hidden" data-item-key="${itemKey}" accept="image/*" multiple>
+                    ${isEditable ? `
+                        <input type="file" class="hn-batch-cam-file hidden" data-item-key="${itemKey}" accept="image/*" capture="environment" multiple>
+                        <input type="file" class="hn-batch-gal-file hidden" data-item-key="${itemKey}" accept="image/*" multiple>
 
-                    <button type="button" class="hn-batch-cam-btn px-2.5 py-2 bg-white border border-gray-300 hover:border-blue-500 hover:text-blue-600 rounded-lg text-xs font-medium flex items-center gap-1 active:scale-95 shadow-2xs transition-colors flex-shrink-0" data-item-key="${itemKey}">
-                        <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                        <span>Chụp ảnh</span>
-                    </button>
-                    <button type="button" class="hn-batch-gal-btn px-2.5 py-2 bg-white border border-gray-300 hover:border-blue-500 hover:text-blue-600 rounded-lg text-xs font-medium flex items-center gap-1 active:scale-95 shadow-2xs transition-colors flex-shrink-0" data-item-key="${itemKey}">
-                        <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <span>Thêm ảnh</span>
-                    </button>
+                        <button type="button" class="hn-batch-cam-btn px-2.5 py-2 bg-white border border-gray-300 hover:border-blue-500 hover:text-blue-600 rounded-lg text-xs font-medium flex items-center gap-1 active:scale-95 shadow-2xs transition-colors flex-shrink-0" data-item-key="${itemKey}">
+                            <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                            <span>Chụp ảnh</span>
+                        </button>
+                        <button type="button" class="hn-batch-gal-btn px-2.5 py-2 bg-white border border-gray-300 hover:border-blue-500 hover:text-blue-600 rounded-lg text-xs font-medium flex items-center gap-1 active:scale-95 shadow-2xs transition-colors flex-shrink-0" data-item-key="${itemKey}">
+                            <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span>Thêm ảnh</span>
+                        </button>
+                    ` : ''}
                 </div>
 
                 <!-- Container preview ảnh mới chọn cho sản phẩm này -->
@@ -3002,11 +3166,11 @@ function renderBatchProductsList(items, batchItemTimelineMap = new Map()) {
                         </div>
                         <div class="space-y-2">
                             ${logs.map(log => {
-                                const isGiaHan = log.loai_moc === 'gia_han';
-                                const badgeClass = isGiaHan ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200';
-                                const label = isGiaHan ? 'Gia hạn' : 'Báo trả';
-                                const logImgs = Array.isArray(log.hinh_anh) ? log.hinh_anh : [];
-                                return `
+            const isGiaHan = log.loai_moc === 'gia_han';
+            const badgeClass = isGiaHan ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200';
+            const label = isGiaHan ? 'Gia hạn' : 'Báo trả';
+            const logImgs = Array.isArray(log.hinh_anh) ? log.hinh_anh : [];
+            return `
                                     <div class="bg-gray-50/90 border border-gray-200 rounded-lg p-2.5 text-xs text-gray-700 space-y-1.5 shadow-3xs">
                                         <div class="flex items-center justify-between gap-1 flex-wrap">
                                             <div class="flex items-center gap-1.5">
@@ -3015,9 +3179,11 @@ function renderBatchProductsList(items, batchItemTimelineMap = new Map()) {
                                             </div>
                                             <div class="flex items-center gap-1.5">
                                                 ${log.nguoi_thuc_hien ? `<span class="text-[10px] text-gray-400">Bởi: <b class="text-gray-600 font-medium">${log.nguoi_thuc_hien}</b></span>` : ''}
-                                                <button type="button" class="hn-batch-delete-log-btn text-gray-300 hover:text-red-600 p-0.5 transition-colors" data-log-id="${log.id}" title="Xóa mốc này">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                </button>
+                                                ${isEditable ? `
+                                                    <button type="button" class="hn-batch-delete-log-btn text-gray-300 hover:text-red-600 p-0.5 transition-colors" data-log-id="${log.id}" title="Xóa mốc này">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                    </button>
+                                                ` : ''}
                                             </div>
                                         </div>
 
@@ -3037,7 +3203,7 @@ function renderBatchProductsList(items, batchItemTimelineMap = new Map()) {
                                         ` : ''}
                                     </div>
                                 `;
-                            }).join('')}
+        }).join('')}
                         </div>
                     </div>
                 ` : ''}
@@ -3207,6 +3373,12 @@ async function saveBatchDo() {
     }
 
     const bms = (document.getElementById('hn-batch-bms')?.value || '').trim();
+
+    // Kiểm tra quyền sửa
+    if (!checkCanEditDo(doItems, bms)) {
+        showToast('Bạn không có quyền chỉnh sửa đơn DO này (chỉ BMs hoặc Người mượn mới có quyền sửa).', 'warning');
+        return;
+    }
     const region = (document.getElementById('hn-batch-region')?.value || '').trim();
     const note = (document.getElementById('hn-batch-note')?.value || '').trim();
     const typeRadio = document.querySelector('input[name="hn-batch-moc-type"]:checked');
@@ -3419,11 +3591,7 @@ export function initHangNoView() {
     // Event listeners cho Timeline Modal
     document.getElementById('hn-tl-modal-close')?.addEventListener('click', closeTimelineModal);
 
-    document.getElementById('hang-no-timeline-modal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'hang-no-timeline-modal') {
-            closeTimelineModal();
-        }
-    });
+    bindBackdropClose('hang-no-timeline-modal', closeTimelineModal);
 
     // Nút chụp ảnh camera
     const cameraInput = document.getElementById('hn-camera-input');
@@ -3458,9 +3626,7 @@ export function initHangNoView() {
     document.getElementById('hn-batch-modal-close')?.addEventListener('click', closeBatchDoModal);
     document.getElementById('hn-batch-modal-cancel')?.addEventListener('click', closeBatchDoModal);
     document.getElementById('hn-batch-save-btn')?.addEventListener('click', saveBatchDo);
-    document.getElementById('hang-no-batch-modal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'hang-no-batch-modal') closeBatchDoModal();
-    });
+    bindBackdropClose('hang-no-batch-modal', closeBatchDoModal);
 
     // 2 Tab chuyển đổi trong Batch Modal
     document.getElementById('hn-batch-tab-update')?.addEventListener('click', () => switchBatchTab('update'));

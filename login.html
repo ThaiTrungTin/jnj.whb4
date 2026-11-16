@@ -110,14 +110,14 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Vai trò thành viên <span class="text-red-500">*</span></label>
                         <select id="reg-role" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-colors">
-                            <option value="View">VIEW (Chỉ xem tồn kho)</option>
-                            <option value="User">USER (Xem tồn kho & Chi tiết)</option>
+                            <option value="User" selected>USER (Tồn kho, Chi tiết, Request & Hàng nợ)</option>
+                            <option value="View">VIEW (Xem dữ liệu cá nhân)</option>
                         </select>
                     </div>
 
-                    <!-- Dropdown ngành (chỉ hiện khi chọn USER) -->
-                    <div id="reg-nganh-wrapper" class="hidden">
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Chọn ngành phụ trách (Không bắt buộc)</label>
+                    <!-- Dropdown ngành (hiển thị mặc định) -->
+                    <div id="reg-nganh-wrapper">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Chọn ngành phụ trách / theo dõi</label>
                         <div class="relative">
                             <button type="button" id="reg-nganh-btn" class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg flex justify-between items-center text-slate-700 hover:bg-slate-100 transition-colors">
                                 <span id="reg-nganh-text" class="truncate">Bấm để chọn ngành...</span>
@@ -459,8 +459,8 @@
                 const userToSave = profile || {
                     gmail: email,
                     ho_ten: data.user.user_metadata?.ho_ten || email.split('@')[0],
-                    phan_quyen: data.user.user_metadata?.phan_quyen || 'View',
-                    xem_view: data.user.user_metadata?.xem_view || 'view-ton-kho',
+                    phan_quyen: data.user.user_metadata?.phan_quyen || 'User',
+                    xem_view: data.user.user_metadata?.xem_view || 'view-ton-kho,view-chi-tiet,view-request,view-hang-no',
                     xem_data: data.user.user_metadata?.xem_data || '',
                     stt: 'Đã Duyệt'
                 };
@@ -574,15 +574,16 @@
 
                 setButtonLoading('btn-register', true, 'Đăng ký & Nhận mã OTP');
 
+                const DEFAULT_REGISTER_VIEWS = 'view-ton-kho,view-chi-tiet,view-request,view-hang-no';
                 const selectedNganh = Array.from(document.querySelectorAll('input[name="reg-nganh"]:checked')).map(cb => cb.value);
-                const xem_view = (phan_quyen === 'View') ? 'view-ton-kho' : 'view-ton-kho,view-chi-tiet';
-                const xem_data = (phan_quyen === 'User') ? selectedNganh.join(',') : '';
+                const xem_view = DEFAULT_REGISTER_VIEWS;
+                const xem_data = selectedNganh.join(',');
 
                 const { data, error } = await sb.auth.signUp({
                     email: email,
                     password: password,
                     options: {
-                        data: { ho_ten, phan_quyen, xem_view, xem_data }
+                        data: { ho_ten, phan_quyen: phan_quyen || 'User', xem_view, xem_data }
                     }
                 });
                 if (error) {
@@ -627,13 +628,32 @@
 
                 if (currentOtpType === 'signup') {
                     showMessage('Kích hoạt tài khoản thành công! Đang chuyển hướng...', false);
+                    const meta = data.user?.user_metadata || {};
+                    const desiredRole = meta.phan_quyen || 'User';
+                    const desiredView = meta.xem_view || 'view-ton-kho,view-chi-tiet,view-request,view-hang-no';
+                    const desiredData = meta.xem_data || '';
+                    const desiredName = meta.ho_ten || currentPendingEmail.split('@')[0];
+
                     let { data: profile } = await sb.from('user').select('*').ilike('gmail', currentPendingEmail).maybeSingle();
+                    if (profile) {
+                        const { data: updatedProfile } = await sb.from('user')
+                            .update({
+                                ho_ten: profile.ho_ten || desiredName,
+                                phan_quyen: desiredRole,
+                                xem_view: desiredView,
+                                xem_data: desiredData
+                            })
+                            .ilike('gmail', currentPendingEmail)
+                            .select('*')
+                            .maybeSingle();
+                        if (updatedProfile) profile = updatedProfile;
+                    }
                     const userToSave = profile || {
                         gmail: currentPendingEmail,
-                        ho_ten: data.user?.user_metadata?.ho_ten || currentPendingEmail.split('@')[0],
-                        phan_quyen: data.user?.user_metadata?.phan_quyen || 'View',
-                        xem_view: data.user?.user_metadata?.xem_view || 'view-ton-kho',
-                        xem_data: data.user?.user_metadata?.xem_data || '',
+                        ho_ten: desiredName,
+                        phan_quyen: desiredRole,
+                        xem_view: desiredView,
+                        xem_data: desiredData,
                         stt: 'Đã Duyệt'
                     };
                     sessionStorage.setItem('loggedInUser', JSON.stringify(userToSave));
@@ -743,10 +763,8 @@
 
             fetchIndustries();
 
-            // Toggle ngành phụ trách khi đổi vai trò
-            document.getElementById('reg-role').addEventListener('change', (e) => {
-                document.getElementById('reg-nganh-wrapper').classList.toggle('hidden', e.target.value !== 'User');
-            });
+            // Luôn cho phép chọn ngành khi đăng ký
+            document.getElementById('reg-nganh-wrapper')?.classList.remove('hidden');
 
             // Dropdown ngành
             const nganhBtn = document.getElementById('reg-nganh-btn');

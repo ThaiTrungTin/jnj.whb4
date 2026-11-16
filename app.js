@@ -71,6 +71,14 @@ export const viewStates = {
         totalFilteredCount: 0,
         paginationText: '',
     },
+    'view-request': {
+        currentPage: 1,
+        itemsPerPage: 50,
+        searchTerm: '',
+        filters: {},
+        totalFilteredCount: 0,
+        paginationText: ''
+    },
     'view-hang-no': {
         currentPage: 1,
         itemsPerPage: 50,
@@ -87,6 +95,7 @@ let isViewInitialized = {
     'view-san-pham': false,
     'view-ton-kho': false,
     'view-chi-tiet': false,
+    'view-request': false,
     'view-hang-no': false,
     'view-cai-dat': false,
 };
@@ -735,6 +744,9 @@ export function applyViewPermissions() {
     if (isAdmin && !allowedViews.includes('view-hang-no')) {
         allowedViews.push('view-hang-no');
     }
+    if (isAdmin && !allowedViews.includes('view-request')) {
+        allowedViews.push('view-request');
+    }
 
     document.querySelectorAll('.nav-button').forEach(btn => {
         const viewId = btn.dataset.view;
@@ -754,7 +766,7 @@ export async function showView(viewId) {
     if (currentUser) {
         const isAdmin = currentUser.phan_quyen === 'Admin';
         const allowedViews = (currentUser.xem_view || '').split(',').map(v => v.trim()).filter(Boolean);
-        const managedViews = ['view-phat-trien', 'view-san-pham', 'view-ton-kho', 'view-chi-tiet', 'view-hang-no'];
+        const managedViews = ['view-phat-trien', 'view-san-pham', 'view-ton-kho', 'view-chi-tiet', 'view-request', 'view-hang-no'];
         
         if (!isAdmin && managedViews.includes(viewId) && !allowedViews.includes(viewId)) {
             const fallbackView = managedViews.find(v => allowedViews.includes(v)) || 'view-cai-dat';
@@ -767,6 +779,7 @@ export async function showView(viewId) {
         'view-san-pham': 'Sản Phẩm',
         'view-ton-kho': 'Tồn Kho',
         'view-chi-tiet': 'Chi Tiết',
+        'view-request': 'Request',
         'view-hang-no': 'Hàng Nợ',
         'view-cai-dat': 'Cài Đặt',
     };
@@ -853,6 +866,29 @@ export async function showView(viewId) {
             }
             const { fetchChiTiet } = await import('./chitiet.js');
             await fetchChiTiet();
+        } else if (viewId === 'view-request') {
+            try {
+                const mod = await import('./request.js');
+                if (!isViewInitialized['view-request']) {
+                    if (typeof mod.initRequestView === 'function') mod.initRequestView();
+                    isViewInitialized['view-request'] = true;
+                }
+                if (typeof mod.fetchRequest === 'function') await mod.fetchRequest();
+            } catch (e) {
+                if (viewContainer && !viewContainer.innerHTML.trim()) {
+                    viewContainer.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full bg-white rounded-xl border border-slate-200 shadow-xs p-8 text-center">
+                            <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-sm font-bold text-slate-800">Màn hình Request</h3>
+                            <p class="text-xs text-slate-500 mt-1">Chức năng đang được xây dựng và sẽ sớm hoạt động.</p>
+                        </div>
+                    `;
+                }
+            }
         } else if (viewId === 'view-hang-no') {
             if (!isViewInitialized['view-hang-no']) {
                 const { initHangNoView } = await import('./hangno.js');
