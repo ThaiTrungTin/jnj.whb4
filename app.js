@@ -1187,6 +1187,9 @@ function setupDataRealtime() {
         } else if (currentView === 'view-hang-no') {
             const { fetchHangNo } = await import('./hangno.js');
             await fetchHangNo(1, false);
+        } else if (currentView === 'view-request') {
+            const { fetchRequest } = await import('./request.js');
+            await fetchRequest(viewStates['view-request'].currentPage, false);
         }
         showLoading(false);
     };
@@ -1204,6 +1207,16 @@ function setupDataRealtime() {
                     }
                 }
             }
+            // Nếu bảng là request, ton_kho hoặc chi_tiet, kiểm tra xem modal request có đang mở không để cập nhật realtime tồn & khả dụng
+            if (tableName === 'request' || tableName === 'ton_kho' || tableName === 'chi_tiet') {
+                const rqModal = document.getElementById('rq-modal');
+                if (rqModal && !rqModal.classList.contains('hidden')) {
+                    const { refreshLiveRequestStock } = await import('./request.js');
+                    if (typeof refreshLiveRequestStock === 'function') {
+                        refreshLiveRequestStock();
+                    }
+                }
+            }
         }, 500); 
     };
 
@@ -1214,6 +1227,7 @@ function setupDataRealtime() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'chi_tiet_vt' }, () => handleRealtimeEvent('chi_tiet_vt'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'hang_no_timeline' }, () => handleRealtimeEvent('hang_no_timeline'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'hang_no_info' }, () => handleRealtimeEvent('hang_no_info'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'request' }, () => handleRealtimeEvent('request'))
         .subscribe();
 }
 
